@@ -1,0 +1,32 @@
+services:
+  vulnerable-app:
+    build: ./vulnerable-app
+    container_name: vulnerable-app
+    hostname: vulnerable-app
+    ports:
+      - "2222:22"
+      - "5000:5000"
+    networks:
+      - challenge_net
+
+  judge:
+    build: ./judge
+    container_name: judge
+    hostname: judge
+    ports:
+      - "8080:8080"
+    networks:
+      - challenge_net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - vulnerable-app
+    environment:
+      - TARGET_HOST=vulnerable-app
+      - TARGET_PORT=5000
+      - TARGET_SSH_PORT=22
+      - TARGET_DB_PORT=5432
+
+networks:
+  challenge_net:
+    driver: bridge

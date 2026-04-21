@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Search — SecureBox</title>
+<style>
+  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+  input[type=text] { padding:8px; width:70%; }
+  button { padding:8px 18px; }
+  .result { border:1px solid #ddd; border-radius:4px; padding:14px; margin:12px 0; background:#fff; }
+  .result h3 { margin:0 0 6px; }
+</style>
+</head>
+<body>
+<h2>Search</h2>
+<form method="GET">
+  <input type="text" name="q" value="{{ query | safe }}" placeholder="Search posts…">
+  <button type="submit">Search</button>
+</form>
+
+{% if query %}
+<!-- VULNERABLE: query reflected without escaping — reflected XSS -->
+<p>Results for: {{ query | safe }}</p>
+{% endif %}
+
+{% for result in results %}
+<div class="result">
+  <!-- VULNERABLE: results rendered without escaping — enables UNION SQLi data display -->
+  <h3>{{ result[0] | safe }}</h3>
+  <p>{{ result[1] | safe }}</p>
+</div>
+{% endfor %}
+
+{% if query and not results %}
+<p>No results found.</p>
+{% endif %}
+
+<p><a href="/">Home</a></p>
+</body>
+</html>

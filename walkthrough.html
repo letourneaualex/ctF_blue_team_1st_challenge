@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureBox — Blue Team Walkthrough</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0c; --surface: #111115; --surface-2: #19191f; --surface-3: #222229;
+    --border: #2a2a33; --border-bright: #3a3a46;
+    --text: #b8bcc8; --muted: #5e6270; --heading: #e2e4ec;
+    --cyan: #00e5cc; --cyan-dim: #00705f; --cyan-glow: rgba(0,229,204,.08);
+    --red: #ff4f6a; --red-dim: #5c1a25; --red-glow: rgba(255,79,106,.06);
+    --green: #3ddc84; --green-dim: #1a5c38; --green-glow: rgba(61,220,132,.06);
+    --amber: #ffb340; --amber-dim: #5c4010;
+    --purple: #b38aff; --blue: #5ca0ff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Newsreader',Georgia,serif; font-size:16px; line-height:1.75;
+    padding:2.5rem 2rem; max-width:980px; margin:0 auto;
+  }
+  header { position:relative; padding-bottom:2.5rem; margin-bottom:3rem; }
+  header::after {
+    content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg,var(--cyan-dim),var(--border),transparent);
+  }
+  .badge {
+    font-family:'IBM Plex Mono',monospace; font-size:.65rem; font-weight:600;
+    letter-spacing:.18em; text-transform:uppercase; color:var(--bg);
+    background:var(--cyan); display:inline-block; padding:.2rem .7rem;
+    border-radius:2px; margin-bottom:1.2rem;
+  }
+  .badge.warn { background:var(--red); }
+  h1 { font-family:'IBM Plex Mono',monospace; font-size:2.2rem; font-weight:700;
+       color:var(--heading); line-height:1.15; margin-bottom:.6rem; letter-spacing:-.02em; }
+  h1 span { color:var(--cyan); }
+  header > p { color:var(--muted); font-size:1.05rem; max-width:680px; }
+  h2 {
+    font-family:'IBM Plex Mono',monospace; font-size:1.05rem; font-weight:700;
+    color:var(--cyan); margin-top:3.5rem; margin-bottom:1.2rem;
+    letter-spacing:.03em; display:flex; align-items:center; gap:.8rem;
+  }
+  h2 .num { font-size:.7rem; color:var(--muted); background:var(--surface-2);
+             border:1px solid var(--border); border-radius:3px;
+             padding:.15rem .5rem; font-weight:500; }
+  h2::after { content:''; flex:1; height:1px; background:var(--border); }
+  h3 { font-family:'IBM Plex Mono',monospace; font-size:.9rem; font-weight:600;
+       color:var(--heading); margin-top:2rem; margin-bottom:.7rem; }
+  p { margin-bottom:1rem; }
+  code, pre { font-family:'IBM Plex Mono',monospace; font-size:.8rem; }
+  code { background:var(--surface-2); border:1px solid var(--border);
+         padding:.12em .4em; border-radius:3px; color:var(--amber); }
+  pre {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:1.3rem 1.4rem; overflow-x:auto; margin-bottom:1.5rem;
+    line-height:1.6; color:var(--text); position:relative;
+  }
+  pre code { background:none; border:none; padding:0; color:inherit; }
+  pre .cmt  { color:var(--muted); }
+  pre .kw   { color:var(--cyan); }
+  pre .str  { color:var(--green); }
+  pre .cmd  { color:var(--amber); }
+  pre .lang-label {
+    position:absolute; top:.5rem; right:.7rem; font-size:.6rem;
+    text-transform:uppercase; letter-spacing:.1em; color:var(--muted);
+    background:var(--surface-2); padding:.1rem .4rem; border-radius:2px;
+  }
+  .callout { border-radius:6px; padding:1rem 1.3rem; margin:1.5rem 0; font-size:.9rem; }
+  .callout.info  { background:var(--cyan-glow);  border:1px solid var(--cyan-dim); }
+  .callout.warn  { background:var(--red-glow);   border:1px solid var(--red-dim); }
+  .callout.ok    { background:var(--green-glow); border:1px solid var(--green-dim); }
+  .callout-label {
+    font-family:'IBM Plex Mono',monospace; font-size:.65rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.12em; margin-bottom:.4rem;
+  }
+  .callout.info .callout-label { color:var(--cyan); }
+  .callout.warn .callout-label { color:var(--red); }
+  .callout.ok   .callout-label { color:var(--green); }
+  .fix-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:1.5rem 1.6rem; margin:1.5rem 0; position:relative; overflow:hidden;
+  }
+  .fix-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  }
+  .fix-card.mal::before  { background:var(--red); }
+  .fix-card.hyg::before  { background:var(--purple); }
+  .fix-card .fix-id {
+    font-family:'IBM Plex Mono',monospace; font-size:.65rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.12em; margin-bottom:.3rem;
+  }
+  .fix-card.mal .fix-id { color:var(--red); }
+  .fix-card.hyg .fix-id { color:var(--purple); }
+  .fix-card .fix-title {
+    font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600;
+    color:var(--heading); margin-bottom:.6rem;
+  }
+  .fix-card .fix-file {
+    font-family:'IBM Plex Mono',monospace; font-size:.75rem; color:var(--muted);
+    margin-bottom:1rem;
+  }
+  .fix-card .fix-file span { color:var(--amber); }
+  .tag {
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:.6rem;
+    font-weight:700; text-transform:uppercase; letter-spacing:.1em;
+    padding:.2rem .5rem; border-radius:3px; margin-right:.4rem;
+  }
+  .tag.safe   { background:var(--green-dim); color:var(--green); }
+  .tag.danger { background:var(--red-dim);   color:var(--red); }
+  .tag.note   { background:var(--surface-3); color:var(--muted); }
+  table.step-table { width:100%; border-collapse:collapse; margin:1.2rem 0; font-size:.88rem; }
+  .step-table th {
+    font-family:'IBM Plex Mono',monospace; font-size:.7rem; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--muted); text-align:left;
+    padding:.6rem 1rem; border-bottom:2px solid var(--border); background:var(--surface);
+  }
+  .step-table td { padding:.65rem 1rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  .step-table tr:hover { background:var(--cyan-glow); }
+  .step-num { font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--cyan); }
+  hr.divider { border:none; border-top:1px solid var(--border); margin:3.5rem 0; }
+  .footer { color:var(--muted); font-size:.82rem; text-align:center;
+            margin-top:3rem; font-family:'IBM Plex Mono',monospace; }
+  .toc { background:var(--surface); border:1px solid var(--border);
+         border-radius:6px; padding:1.3rem 1.8rem; margin:2rem 0; }
+  .toc-title { font-family:'IBM Plex Mono',monospace; font-size:.65rem; font-weight:700;
+               text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin-bottom:.7rem; }
+  .toc ol { list-style:none; counter-reset:toc; padding-left:0; columns:2; column-gap:2rem; }
+  @media(max-width:600px){ .toc ol { columns:1; } }
+  .toc ol li { counter-increment:toc; padding:.2rem 0;
+               font-family:'IBM Plex Mono',monospace; font-size:.78rem; break-inside:avoid; }
+  .toc ol li::before { content:counter(toc,decimal-leading-zero);
+                       color:var(--cyan-dim); margin-right:.6rem; font-weight:500; }
+  .toc a { color:var(--text); text-decoration:none; }
+  .toc a:hover { color:var(--cyan); }
+  .inline-diff { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1rem 0; }
+  @media(max-width:700px){ .inline-diff { grid-template-columns:1fr; } }
+  .diff-box { background:var(--surface); border:1px solid var(--border); border-radius:6px;
+              padding:1rem 1.2rem; }
+  .diff-label { font-family:'IBM Plex Mono',monospace; font-size:.6rem; font-weight:700;
+                text-transform:uppercase; letter-spacing:.12em; margin-bottom:.5rem; }
+  .diff-box.before .diff-label { color:var(--red); }
+  .diff-box.after  .diff-label { color:var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge warn">Spoilers — Player Walkthrough</div>
+  <h1>Secure<span>Box</span>: Solution Guide</h1>
+  <p>Step-by-step instructions for patching all 10 malicious payloads and 5 hygiene checks without breaking the 15 legitimate payloads.</p>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#access">Getting Access</a></li>
+    <li><a href="#order">Recommended Order</a></li>
+    <li><a href="#m01">M-01 / M-02 — SQL Injection</a></li>
+    <li><a href="#m03">M-03 — Stored XSS</a></li>
+    <li><a href="#m04">M-04 — Reflected XSS</a></li>
+    <li><a href="#m05">M-05 — IDOR</a></li>
+    <li><a href="#m06">M-06 — Path Traversal</a></li>
+    <li><a href="#m07">M-07 — Malicious Upload</a></li>
+    <li><a href="#m08">M-08 — SSH Root Login</a></li>
+    <li><a href="#m09">M-09 — Debug Leak</a></li>
+    <li><a href="#m10">M-10 — DB Default Creds</a></li>
+    <li><a href="#h01">H-01 — Rogue UID-0 Account</a></li>
+    <li><a href="#h02">H-02 — Malicious Cron Job</a></li>
+    <li><a href="#h03">H-03 — Entrypoint Backdoor</a></li>
+    <li><a href="#h04">H-04 — SUID on find</a></li>
+    <li><a href="#h05">H-05 — Offensive Tools</a></li>
+  </ol>
+</nav>
+
+
+<!-- ════════════════════ ACCESS ════════════════════ -->
+<h2 id="access"><span class="num">01</span> Getting Access</h2>
+
+<p>The vulnerable application runs in a Docker container. SSH into it on port 2222 using the default root credentials:</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmd">ssh root@localhost -p 2222</span>
+<span class="cmt"># Password: toor</span></code></pre>
+
+<div class="callout info">
+  <div class="callout-label">Auto-reload</div>
+  Flask is running in debug mode with the Werkzeug file watcher enabled. Any change you save to a <code>.py</code> file or an HTML template under <code>/app</code> is picked up automatically — no manual restart needed. Wait for the reloader message in the <code>docker compose</code> output before testing.
+</div>
+
+<div class="callout warn">
+  <div class="callout-label">Fix M-09 (Debug) Last</div>
+  Disabling debug mode also disables the auto-reloader. Do all code edits first while the reloader is active, then turn off debug mode as the final code change.
+</div>
+
+<p>If you don't have a text editor available inside the container, install one:</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmd">apt-get install -y nano</span></code></pre>
+
+<p>All application files live under <code>/app</code>. The two files you will edit most are:</p>
+
+<table class="step-table">
+  <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>/app/app.py</code></td><td>All Flask routes — SQLi, IDOR, upload, path traversal</td></tr>
+    <tr><td><code>/app/config.py</code></td><td>DEBUG flag and database credentials</td></tr>
+    <tr><td><code>/app/templates/profile.html</code></td><td>Stored XSS — bio rendered with <code>| safe</code></td></tr>
+    <tr><td><code>/app/templates/search.html</code></td><td>Reflected XSS — query reflected without escaping</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ════════════════════ ORDER ════════════════════ -->
+<h2 id="order"><span class="num">02</span> Recommended Order</h2>
+
+<p>Do hygiene checks first — they require only system commands and take effect immediately. Then fix application vulnerabilities while the auto-reloader is active. Disable debug mode last.</p>
+
+<table class="step-table">
+  <thead><tr><th>#</th><th>Fix</th><th>Type</th><th>Requires Reload?</th></tr></thead>
+  <tbody>
+    <tr><td class="step-num">1</td><td>H-01 — Remove rogue UID-0 account</td><td>System</td><td>No</td></tr>
+    <tr><td class="step-num">2</td><td>H-02 — Remove malicious cron job</td><td>System</td><td>No</td></tr>
+    <tr><td class="step-num">3</td><td>H-03 — Remove entrypoint backdoor</td><td>System</td><td>No</td></tr>
+    <tr><td class="step-num">4</td><td>H-04 — Remove SUID bit from find</td><td>System</td><td>No</td></tr>
+    <tr><td class="step-num">5</td><td>H-05 — Remove nmap and netcat</td><td>System</td><td>No</td></tr>
+    <tr><td class="step-num">6</td><td>M-01 / M-02 — Parameterise SQL queries</td><td>Code</td><td>Auto</td></tr>
+    <tr><td class="step-num">7</td><td>M-03 — Remove <code>| safe</code> from bio template</td><td>Template</td><td>Auto</td></tr>
+    <tr><td class="step-num">8</td><td>M-04 — Remove <code>| safe</code> from search template</td><td>Template</td><td>Auto</td></tr>
+    <tr><td class="step-num">9</td><td>M-05 — Add ownership check to profile route</td><td>Code</td><td>Auto</td></tr>
+    <tr><td class="step-num">10</td><td>M-06 — Replace raw file open with send_from_directory</td><td>Code</td><td>Auto</td></tr>
+    <tr><td class="step-num">11</td><td>M-07 — Add file extension whitelist to upload route</td><td>Code</td><td>Auto</td></tr>
+    <tr><td class="step-num">12</td><td>M-08 — Change root SSH password</td><td>System</td><td>No</td></tr>
+    <tr><td class="step-num">13</td><td>M-10 — Rotate database password</td><td>DB + Code</td><td>Auto</td></tr>
+    <tr><td class="step-num">14</td><td>M-09 — Disable debug mode (do this last)</td><td>Code</td><td>Auto (final)</td></tr>
+  </tbody>
+</table>
+
+
+<hr class="divider">
+<h2 id="m01"><span class="num">M-01 / M-02</span> SQL Injection</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-01 · SQLi Auth Bypass &nbsp;·&nbsp; M-02 · UNION Extract</div>
+  <div class="fix-title">Use parameterised queries in the login and search routes</div>
+  <div class="fix-file">File: <span>/app/app.py</span></div>
+
+  <p>Both the login and search routes build SQL queries using Python f-strings, which lets an attacker inject arbitrary SQL. The fix is to pass user input as parameters to psycopg2 rather than formatting it into the query string.</p>
+
+  <h3>Login route — /login</h3>
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code>query = (
+    f<span class="str">"SELECT id, username FROM users "</span>
+    f<span class="str">"WHERE username='{username}' "</span>
+    f<span class="str">"AND password='{password}'"</span>
+)
+cur.execute(query)</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code>cur.execute(
+    <span class="str">"SELECT id, username FROM users "</span>
+    <span class="str">"WHERE username=%s AND password=%s"</span>,
+    (username, password)
+)</code></pre>
+    </div>
+  </div>
+
+  <h3>Search route — /search</h3>
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code>query = (
+    f<span class="str">"SELECT title, content FROM posts "</span>
+    f<span class="str">"WHERE title LIKE '%{q}%' "</span>
+    f<span class="str">"OR content LIKE '%{q}%'"</span>
+)
+cur.execute(query)</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code>cur.execute(
+    <span class="str">"SELECT title, content FROM posts "</span>
+    <span class="str">"WHERE title LIKE %s OR content LIKE %s"</span>,
+    (<span class="str">f'%{q}%'</span>, <span class="str">f'%{q}%'</span>)
+)</code></pre>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    L-01 and L-13 (normal logins with valid credentials) continue to work because parameterised queries treat the input as data, not SQL. L-04 (normal search) likewise returns results as before.
+  </div>
+</div>
+
+
+<h2 id="m03"><span class="num">M-03</span> Stored XSS</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-03 · Stored XSS — Script Injection in Bio</div>
+  <div class="fix-title">Remove the <code>| safe</code> filter from the bio field in profile.html</div>
+  <div class="fix-file">File: <span>/app/templates/profile.html</span></div>
+
+  <p>Jinja2 auto-escapes HTML by default in <code>.html</code> templates. The <code>| safe</code> filter overrides this and renders the bio's raw HTML — including any <code>&lt;script&gt;</code> tags an attacker stored there. Removing the filter restores auto-escaping.</p>
+
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code>&lt;div class=<span class="str">"bio"</span>&gt;
+  {{ user.bio | safe }}
+&lt;/div&gt;</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code>&lt;div class=<span class="str">"bio"</span>&gt;
+  {{ user.bio }}
+&lt;/div&gt;</code></pre>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    L-03 and L-15 post plain-text bios. Plain text is rendered identically with or without the filter — auto-escaping only changes the output when the bio contains HTML characters.
+  </div>
+</div>
+
+
+<h2 id="m04"><span class="num">M-04</span> Reflected XSS</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-04 · Reflected XSS — Search Parameter</div>
+  <div class="fix-title">Remove the <code>| safe</code> filters from search.html</div>
+  <div class="fix-file">File: <span>/app/templates/search.html</span></div>
+
+  <p>The search template reflects the query parameter and the result columns directly into the HTML using <code>| safe</code>, allowing a crafted URL to inject arbitrary HTML/JS. Remove the filter from all three locations.</p>
+
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code>&lt;input … value=<span class="str">"{{ query | safe }}"</span>&gt;
+&lt;p&gt;Results for: {{ query | safe }}&lt;/p&gt;
+&lt;h3&gt;{{ result[0] | safe }}&lt;/h3&gt;
+&lt;p&gt;{{ result[1] | safe }}&lt;/p&gt;</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code>&lt;input … value=<span class="str">"{{ query }}"</span>&gt;
+&lt;p&gt;Results for: {{ query }}&lt;/p&gt;
+&lt;h3&gt;{{ result[0] }}&lt;/h3&gt;
+&lt;p&gt;{{ result[1] }}&lt;/p&gt;</code></pre>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    L-04 searches for <code>python tutorial</code>. This is plain text with no HTML characters, so auto-escaping has no visible effect. The search page continues to return a 200 response.
+  </div>
+</div>
+
+
+<h2 id="m05"><span class="num">M-05</span> IDOR — Insecure Direct Object Reference</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-05 · Unauthorised Profile Access</div>
+  <div class="fix-title">Add an ownership check to the profile route</div>
+  <div class="fix-file">File: <span>/app/app.py</span></div>
+
+  <p>The <code>/profile/&lt;user_id&gt;</code> route returns any user's data to any authenticated session because it never checks whether the requesting user owns that profile. Adding a single ownership check fixes this.</p>
+
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code><span class="kw">@app.route</span>(<span class="str">'/profile/&lt;int:user_id&gt;'</span>)
+<span class="kw">def</span> profile(user_id):
+    <span class="cmt"># No ownership check — IDOR</span>
+    conn = get_db()
+    …</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code><span class="kw">@app.route</span>(<span class="str">'/profile/&lt;int:user_id&gt;'</span>)
+<span class="kw">def</span> profile(user_id):
+    <span class="kw">if</span> (<span class="str">'user_id'</span> <span class="kw">not in</span> session <span class="kw">or</span>
+            session[<span class="str">'user_id'</span>] != user_id):
+        abort(<span class="str">403</span>)
+    conn = get_db()
+    …</code></pre>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    L-02 logs in as <code>testuser</code> (id=1) and accesses <code>/profile/1</code> — ownership matches, 200 returned.
+    L-14 logs in as <code>alice</code> (id=2) and accesses <code>/profile/2</code> — ownership matches, 200 returned.
+    M-05 logs in as <code>testuser</code> (id=1) and accesses <code>/profile/2</code> — ownership mismatch, 403 returned. ✓
+  </div>
+</div>
+
+
+<h2 id="m06"><span class="num">M-06</span> Path Traversal</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-06 · Read /etc/passwd via Upload Path</div>
+  <div class="fix-title">Replace raw <code>open()</code> with <code>send_from_directory()</code> and remove the catch-all route</div>
+  <div class="fix-file">File: <span>/app/app.py</span></div>
+
+  <p>The current implementation has two problems: the <code>/uploads/</code> route concatenates the filename directly onto the base path without sanitisation, and a catch-all route at the bottom of the file serves any file on the filesystem by its absolute path. Both must be fixed.</p>
+
+  <h3>Step 1 — Replace the uploads route</h3>
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code><span class="kw">from</span> flask <span class="kw">import</span> Response
+
+<span class="kw">@app.route</span>(<span class="str">'/uploads/&lt;path:filename&gt;'</span>)
+<span class="kw">def</span> serve_upload(filename):
+    filepath = <span class="str">'/app/uploads/'</span> + filename
+    <span class="kw">with</span> open(filepath, <span class="str">'rb'</span>) <span class="kw">as</span> fh:
+        <span class="kw">return</span> Response(fh.read())</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code><span class="kw">from</span> flask <span class="kw">import</span> send_from_directory
+
+<span class="kw">@app.route</span>(<span class="str">'/uploads/&lt;path:filename&gt;'</span>)
+<span class="kw">def</span> serve_upload(filename):
+    <span class="kw">return</span> send_from_directory(
+        <span class="str">'/app/uploads'</span>, filename
+    )</code></pre>
+    </div>
+  </div>
+
+  <p><code>send_from_directory</code> calls <code>safe_join()</code> internally, which raises a 404 if the resolved path escapes the upload directory.</p>
+
+  <h3>Step 2 — Remove the catch-all route</h3>
+  <p>Scroll to the bottom of <code>app.py</code> and delete the <code>filesystem_catchall</code> route entirely:</p>
+<pre><code><span class="lang-label">python — delete this block</span><span class="kw">@app.route</span>(<span class="str">'/'</span>+<span class="str">'&lt;path:arbitrary_path&gt;'</span>)
+<span class="kw">def</span> filesystem_catchall(arbitrary_path):
+    filepath = <span class="str">'/'</span> + arbitrary_path
+    <span class="kw">if</span> os.path.isfile(filepath):
+        …</code></pre>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    L-05 uploads <code>photo.jpg</code> and the judge does not attempt to retrieve it via a traversal path. <code>send_from_directory</code> serves files that actually exist inside <code>/app/uploads/</code> without restriction.
+  </div>
+</div>
+
+
+<h2 id="m07"><span class="num">M-07</span> Malicious File Upload</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-07 · Upload Python Webshell</div>
+  <div class="fix-title">Add a file extension whitelist to the upload route</div>
+  <div class="fix-file">File: <span>/app/app.py</span></div>
+
+  <p>The upload route saves any file regardless of its extension or MIME type. Restricting uploads to a known-safe image extension whitelist blocks <code>.py</code>, <code>.sh</code>, and other dangerous types.</p>
+
+  <p>Add the whitelist constant near the top of <code>app.py</code> (after the imports), then add the check inside the upload route:</p>
+
+<pre><code><span class="lang-label">python</span><span class="cmt"># Add near the top of app.py</span>
+ALLOWED_EXTENSIONS = {<span class="str">'jpg'</span>, <span class="str">'jpeg'</span>, <span class="str">'png'</span>, <span class="str">'gif'</span>, <span class="str">'webp'</span>}
+
+
+<span class="kw">@app.route</span>(<span class="str">'/upload'</span>, methods=[<span class="str">'GET'</span>, <span class="str">'POST'</span>])
+<span class="kw">def</span> upload():
+    <span class="kw">if</span> <span class="str">'user_id'</span> <span class="kw">not in</span> session:
+        <span class="kw">return</span> redirect(<span class="str">'/login'</span>)
+    <span class="kw">if</span> request.method == <span class="str">'POST'</span>:
+        f = request.files.get(<span class="str">'file'</span>)
+        <span class="kw">if not</span> f <span class="kw">or</span> f.filename == <span class="str">''</span>:
+            <span class="kw">return</span> <span class="str">'No file selected'</span>, <span class="str">400</span>
+        ext = f.filename.rsplit(<span class="str">'.'</span>, <span class="str">1</span>)[-<span class="str">1</span>].lower() <span class="kw">if</span> <span class="str">'.'</span> <span class="kw">in</span> f.filename <span class="kw">else</span> <span class="str">''</span>
+        <span class="kw">if</span> ext <span class="kw">not in</span> ALLOWED_EXTENSIONS:
+            <span class="kw">return</span> <span class="str">'File type not allowed'</span>, <span class="str">400</span>
+        f.save(<span class="str">f'/app/uploads/{f.filename}'</span>)
+        <span class="kw">return</span> redirect(<span class="str">'/'</span>)
+    <span class="kw">return</span> render_template(<span class="str">'upload.html'</span>)</code></pre>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    L-05 uploads <code>photo.jpg</code> — extension <code>jpg</code> is in the whitelist, upload succeeds. M-07 uploads <code>shell.py</code> — extension <code>py</code> is not in the whitelist, upload returns 400. ✓
+  </div>
+</div>
+
+
+<h2 id="m08"><span class="num">M-08</span> SSH Root Login with Default Password</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-08 · Root Login with Default Password</div>
+  <div class="fix-title">Change the root password</div>
+  <div class="fix-file">System command — no file edit required</div>
+
+  <p>The Dockerfile set root's password to <code>toor</code>. The judge attempts to authenticate as <code>root</code> with that exact password. Changing it to anything else is sufficient.</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmd">echo 'root:C0nta!nerS3cur3' | chpasswd</span></code></pre>
+
+  <div class="callout warn">
+    <div class="callout-label">Do not lose access</div>
+    You are currently connected as root via SSH. After changing the password your current session stays open. If you disconnect, reconnect using the new password. No legitimate payloads use SSH, so this change has no effect on scoring.
+  </div>
+</div>
+
+
+<h2 id="m09"><span class="num">M-09</span> Werkzeug Debug Leak</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-09 · Trigger Werkzeug Debugger</div>
+  <div class="fix-title">Set <code>DEBUG = False</code> in config.py</div>
+  <div class="fix-file">File: <span>/app/config.py</span> — do this last</div>
+
+  <p>When Flask runs in debug mode, any unhandled exception returns the interactive Werkzeug debugger page, which leaks the full stack trace and allows arbitrary code execution via the in-browser console.</p>
+
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before — vulnerable</div>
+<pre><code>DEBUG = <span class="kw">True</span></code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After — fixed</div>
+<pre><code>DEBUG = <span class="kw">False</span></code></pre>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-label">Save this for last</div>
+    Setting <code>DEBUG = False</code> disables the Werkzeug auto-reloader. The reloader will fire once more to apply this change, and after that any subsequent code edits require a manual Flask restart. Make all other code changes first.
+  </div>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    With debug off, all routes continue to function normally. The only difference is that a 500 error now returns a generic error page instead of the debugger. L-06 (homepage) and L-09 (health check) are completely unaffected.
+  </div>
+</div>
+
+
+<h2 id="m10"><span class="num">M-10</span> Database Default Credentials</h2>
+
+<div class="fix-card mal">
+  <div class="fix-id">M-10 · DB Login with Hardcoded Creds</div>
+  <div class="fix-title">Rotate the PostgreSQL <code>admin</code> password and update config.py</div>
+  <div class="fix-file">PostgreSQL + <span>/app/config.py</span></div>
+
+  <p>The judge attempts to connect directly to PostgreSQL on port 5432 using <code>admin:password123</code>. You must change the password in PostgreSQL <em>and</em> update the application's connection string so the app can still reach the database.</p>
+
+  <h3>Step 1 — Change the PostgreSQL password</h3>
+<pre><code><span class="lang-label">shell</span><span class="cmd">su -c "psql -c \"ALTER USER admin PASSWORD 'Db$3cur3P@ss';\"" postgres</span></code></pre>
+
+  <h3>Step 2 — Update the connection string in config.py</h3>
+  <div class="inline-diff">
+    <div class="diff-box before">
+      <div class="diff-label">Before</div>
+<pre><code>DATABASE_URL = (
+  <span class="str">"postgresql://admin:password123"</span>
+  <span class="str">"@localhost/appdb"</span>
+)</code></pre>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-label">After</div>
+<pre><code>DATABASE_URL = (
+  <span class="str">"postgresql://admin:Db$3cur3P@ss"</span>
+  <span class="str">"@localhost/appdb"</span>
+)</code></pre>
+    </div>
+  </div>
+
+  <p>The auto-reloader picks up the <code>config.py</code> change and restarts Flask with the new connection string. All application routes that touch the database will continue to work.</p>
+
+  <div class="callout ok">
+    <div class="callout-label">Legitimate traffic not affected</div>
+    All legitimate payloads connect through the Flask app, which uses the updated connection string. The judge's direct PostgreSQL connection test (M-10) will now fail authentication. ✓
+  </div>
+</div>
+
+
+<hr class="divider">
+<h2 id="h01"><span class="num">H-01</span> Rogue UID-0 Account</h2>
+
+<div class="fix-card hyg">
+  <div class="fix-id">H-01 · Rogue UID-0 Account in /etc/passwd</div>
+  <div class="fix-title">Remove the <code>sysbackup</code> entry from /etc/passwd</div>
+  <div class="fix-file">File: <span>/etc/passwd</span></div>
+
+  <p>A backdoor account named <code>sysbackup</code> was added to <code>/etc/passwd</code> with UID 0, giving it full root privileges. The judge checks that only <code>root</code> has UID 0.</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmt"># Verify the rogue entry exists</span>
+<span class="cmd">grep ':0:' /etc/passwd</span>
+
+<span class="cmt"># Remove it</span>
+<span class="cmd">sed -i '/^sysbackup:/d' /etc/passwd</span>
+
+<span class="cmt"># Verify only root remains</span>
+<span class="cmd">grep ':0:' /etc/passwd</span></code></pre>
+</div>
+
+
+<h2 id="h02"><span class="num">H-02</span> Malicious Cron Job</h2>
+
+<div class="fix-card hyg">
+  <div class="fix-id">H-02 · curl Pipe to Shell in /etc/cron.d</div>
+  <div class="fix-title">Remove the malicious command from the cron file</div>
+  <div class="fix-file">File: <span>/etc/cron.d/system-update</span></div>
+
+  <p>A cron job runs every minute, downloading and executing a remote shell script via <code>curl … | bash</code>. The judge checks that neither <code>curl</code> nor <code>wget</code> appears in this file. The safest fix is to empty the file.</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmt"># View the malicious entry</span>
+<span class="cmd">cat /etc/cron.d/system-update</span>
+
+<span class="cmt"># Empty the file (preserves it so the judge can still read it)</span>
+<span class="cmd">echo '# cleaned' > /etc/cron.d/system-update</span>
+
+<span class="cmt"># Verify</span>
+<span class="cmd">cat /etc/cron.d/system-update</span></code></pre>
+</div>
+
+
+<h2 id="h03"><span class="num">H-03</span> Entrypoint Backdoor</h2>
+
+<div class="fix-card hyg">
+  <div class="fix-id">H-03 · Reverse Shell in entrypoint.sh</div>
+  <div class="fix-title">Remove the reverse shell line from /app/entrypoint.sh</div>
+  <div class="fix-file">File: <span>/app/entrypoint.sh</span></div>
+
+  <p>The entrypoint script contains a line that attempts to open a reverse shell to a remote host using <code>bash -i &gt;&amp; /dev/tcp/…</code>. The judge scans for the patterns <code>/dev/tcp</code>, <code>bash -i</code>, <code>nc -e</code>, and <code>mkfifo</code>.</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmt"># View the backdoor line</span>
+<span class="cmd">grep -n 'dev/tcp\|bash -i\|nc -e\|mkfifo' /app/entrypoint.sh</span>
+
+<span class="cmt"># Remove it</span>
+<span class="cmd">sed -i '/bash -i >& \/dev\/tcp/d' /app/entrypoint.sh</span>
+
+<span class="cmt"># Verify it is gone</span>
+<span class="cmd">grep 'dev/tcp\|bash -i' /app/entrypoint.sh || echo "Clean"</span></code></pre>
+
+  <div class="callout info">
+    <div class="callout-label">Note</div>
+    This change takes effect immediately — the judge reads the file via <code>docker exec cat /app/entrypoint.sh</code> at check time. The running container does not need to restart.
+  </div>
+</div>
+
+
+<h2 id="h04"><span class="num">H-04</span> SUID Bit on find</h2>
+
+<div class="fix-card hyg">
+  <div class="fix-id">H-04 · SUID Set on /usr/bin/find</div>
+  <div class="fix-title">Remove the SUID bit from find</div>
+  <div class="fix-file">System command — no file edit required</div>
+
+  <p>The Dockerfile set the SUID bit on <code>/usr/bin/find</code>, which allows any user to run it as root — a classic privilege escalation vector. The judge checks that the permissions do not start with <code>4</code> (octal).</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmt"># Confirm SUID is set (should show 4755)</span>
+<span class="cmd">stat -c "%a %n" /usr/bin/find</span>
+
+<span class="cmt"># Remove the SUID bit</span>
+<span class="cmd">chmod u-s /usr/bin/find</span>
+
+<span class="cmt"># Verify (should now show 0755)</span>
+<span class="cmd">stat -c "%a %n" /usr/bin/find</span></code></pre>
+</div>
+
+
+<h2 id="h05"><span class="num">H-05</span> Offensive Tools Installed</h2>
+
+<div class="fix-card hyg">
+  <div class="fix-id">H-05 · nmap and netcat Present in Container</div>
+  <div class="fix-title">Remove nmap and netcat</div>
+  <div class="fix-file">System command — no file edit required</div>
+
+  <p>The Dockerfile installed <code>nmap</code> and <code>netcat-openbsd</code> — tools with no legitimate use in a web application container. The judge checks that neither <code>which nmap</code> nor <code>which nc</code> returns a path.</p>
+
+<pre><code><span class="lang-label">shell</span><span class="cmd">apt-get remove -y nmap netcat-openbsd</span>
+
+<span class="cmt"># Verify both are gone</span>
+<span class="cmd">which nmap && echo "STILL PRESENT" || echo "nmap removed"</span>
+<span class="cmd">which nc   && echo "STILL PRESENT" || echo "nc removed"</span></code></pre>
+</div>
+
+
+<hr class="divider">
+
+<h2><span class="num">Summary</span> All Fixes at a Glance</h2>
+
+<table class="step-table">
+  <thead><tr><th>ID</th><th>Fix</th><th>File / Command</th></tr></thead>
+  <tbody>
+    <tr><td><code>M-01</code></td><td>Parameterise login SQL query</td><td><code>/app/app.py</code></td></tr>
+    <tr><td><code>M-02</code></td><td>Parameterise search SQL query</td><td><code>/app/app.py</code></td></tr>
+    <tr><td><code>M-03</code></td><td>Remove <code>| safe</code> from bio in profile template</td><td><code>/app/templates/profile.html</code></td></tr>
+    <tr><td><code>M-04</code></td><td>Remove <code>| safe</code> from query and results in search template</td><td><code>/app/templates/search.html</code></td></tr>
+    <tr><td><code>M-05</code></td><td>Add <code>session['user_id'] != user_id → 403</code> ownership check</td><td><code>/app/app.py</code></td></tr>
+    <tr><td><code>M-06</code></td><td>Use <code>send_from_directory</code>; delete the catch-all route</td><td><code>/app/app.py</code></td></tr>
+    <tr><td><code>M-07</code></td><td>Whitelist image extensions in upload route</td><td><code>/app/app.py</code></td></tr>
+    <tr><td><code>M-08</code></td><td>Change root password: <code>echo 'root:NewPass' | chpasswd</code></td><td>Shell</td></tr>
+    <tr><td><code>M-09</code></td><td>Set <code>DEBUG = False</code> — do last</td><td><code>/app/config.py</code></td></tr>
+    <tr><td><code>M-10</code></td><td>Rotate DB password via <code>ALTER USER</code> + update config</td><td>psql + <code>/app/config.py</code></td></tr>
+    <tr><td><code>H-01</code></td><td><code>sed -i '/^sysbackup:/d' /etc/passwd</code></td><td><code>/etc/passwd</code></td></tr>
+    <tr><td><code>H-02</code></td><td><code>echo '# cleaned' &gt; /etc/cron.d/system-update</code></td><td><code>/etc/cron.d/system-update</code></td></tr>
+    <tr><td><code>H-03</code></td><td><code>sed -i '/bash -i &gt;&amp; \/dev\/tcp/d' /app/entrypoint.sh</code></td><td><code>/app/entrypoint.sh</code></td></tr>
+    <tr><td><code>H-04</code></td><td><code>chmod u-s /usr/bin/find</code></td><td>Shell</td></tr>
+    <tr><td><code>H-05</code></td><td><code>apt-get remove -y nmap netcat-openbsd</code></td><td>Shell</td></tr>
+  </tbody>
+</table>
+
+<p class="footer">SecureBox v2.0 — Blue Team Challenge &nbsp;·&nbsp; Walkthrough</p>
+
+</body>
+</html>

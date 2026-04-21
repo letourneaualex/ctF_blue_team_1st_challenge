@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureBox Judge Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0a0c; --surface: #111115; --surface2: #19191f; --surface3: #222229;
+    --border: #2a2a33; --text: #b8bcc8; --muted: #5e6270; --heading: #e2e4ec;
+    --cyan: #00e5cc; --cyan-dim: #00705f; --cyan-glow: rgba(0,229,204,.08);
+    --red: #ff4f6a; --red-dim: #5c1a25; --red-glow: rgba(255,79,106,.08);
+    --green: #3ddc84; --green-dim: #1a5c38; --green-glow: rgba(61,220,132,.06);
+    --amber: #ffb340; --purple: #b38aff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace;
+         font-size:14px; line-height:1.7; padding:2rem; max-width:1100px; margin:0 auto; }
+
+  /* ── Header ── */
+  header { margin-bottom:2.5rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); }
+  .badge { font-size:.6rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
+           background:var(--cyan); color:var(--bg); display:inline-block;
+           padding:.2rem .6rem; border-radius:2px; margin-bottom:.8rem; }
+  h1 { font-size:1.8rem; font-weight:700; color:var(--heading); margin-bottom:.3rem; }
+  h1 span { color:var(--cyan); }
+  header p { color:var(--muted); max-width:600px; }
+
+  /* ── Panels ── */
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:8px;
+           padding:1.8rem; margin-bottom:1.5rem; }
+
+  /* ── Rules list ── */
+  .rules { list-style:none; }
+  .rules li { padding:.35rem 0; color:var(--text); }
+  .rules li::before { content:'›'; color:var(--cyan); margin-right:.6rem; }
+  .rule-score { font-size:.75rem; color:var(--muted); }
+
+  /* ── Launch button ── */
+  #launch-btn {
+    display:block; width:100%; padding:1.1rem; margin-top:1.5rem;
+    background:var(--cyan); color:var(--bg); border:none; border-radius:6px;
+    font-family:inherit; font-size:1rem; font-weight:700; letter-spacing:.05em;
+    text-transform:uppercase; cursor:pointer; transition:opacity .2s;
+  }
+  #launch-btn:hover { opacity:.85; }
+  #launch-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ── Progress ── */
+  .progress-wrap { background:var(--surface3); border-radius:4px; height:6px; margin:1rem 0; overflow:hidden; }
+  .progress-bar  { height:100%; background:var(--cyan); width:0; transition:width .4s ease; border-radius:4px; }
+
+  /* ── Feed ── */
+  #feed { max-height:220px; overflow-y:auto; font-size:.8rem; }
+  .feed-row { display:flex; gap:.8rem; padding:.25rem 0; border-bottom:1px solid var(--border); }
+  .feed-id  { color:var(--cyan); min-width:55px; }
+  .feed-name { flex:1; color:var(--heading); }
+  .feed-status { font-weight:600; min-width:70px; text-align:right; }
+  .feed-status.ok  { color:var(--green); }
+  .feed-status.fail { color:var(--red); }
+
+  /* ── Score display ── */
+  .score-wrap { text-align:center; padding:1.5rem 0; }
+  .score-num { font-size:4rem; font-weight:700; color:var(--cyan); line-height:1; }
+  .score-label { color:var(--muted); font-size:.75rem; letter-spacing:.12em;
+                 text-transform:uppercase; margin-top:.3rem; }
+  .breakdown { display:flex; gap:1.5rem; justify-content:center; margin-top:1rem; font-size:.8rem; }
+  .bk { background:var(--surface3); border:1px solid var(--border); border-radius:6px; padding:.6rem 1rem; text-align:center; }
+  .bk .bk-num { font-size:1.2rem; font-weight:700; display:block; }
+  .bk .bk-num.good { color:var(--green); }
+  .bk .bk-num.bad  { color:var(--red); }
+  .bk .bk-num.hyg  { color:var(--purple); }
+  .bk .bk-lbl { color:var(--muted); font-size:.65rem; text-transform:uppercase; letter-spacing:.1em; }
+
+  /* ── Flags ── */
+  .flags-track { display:flex; gap:1rem; flex-wrap:wrap; margin-top:1rem; }
+  .flag-box { flex:1; min-width:200px; background:var(--surface3); border:1px solid var(--border);
+              border-radius:6px; padding:.9rem 1rem; position:relative; transition:all .4s; }
+  .flag-box.unlocked { border-color:var(--cyan); background:var(--cyan-glow); }
+  .flag-box .threshold { font-size:.65rem; color:var(--muted); text-transform:uppercase;
+                         letter-spacing:.1em; margin-bottom:.3rem; }
+  .flag-box .flag-val { font-size:.78rem; color:var(--amber); word-break:break-all; }
+  .flag-box .lock { position:absolute; top:.8rem; right:.8rem; color:var(--muted); font-size:1rem; }
+  .flag-box.unlocked .lock { color:var(--cyan); }
+
+  /* ── Results table ── */
+  .results-table { width:100%; border-collapse:collapse; font-size:.8rem; margin-top:1rem; }
+  .results-table th { text-align:left; padding:.5rem .8rem; color:var(--muted);
+                      font-size:.65rem; text-transform:uppercase; letter-spacing:.1em;
+                      border-bottom:2px solid var(--border); background:var(--surface2); }
+  .results-table td { padding:.55rem .8rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .results-table tr:hover { background:var(--cyan-glow); }
+  .type-badge { display:inline-block; font-size:.6rem; font-weight:700; padding:.15rem .45rem;
+                border-radius:2px; text-transform:uppercase; letter-spacing:.1em; }
+  .type-badge.malicious  { background:var(--red-dim);   color:var(--red); }
+  .type-badge.legitimate { background:var(--green-dim);  color:var(--green); }
+  .type-badge.hygiene    { background:#2a1a5c;            color:var(--purple); }
+  .type-badge.unknown    { background:var(--surface3);    color:var(--muted); }
+  .result-icon { font-size:1rem; }
+  td .id-col { color:var(--amber); font-size:.75rem; }
+  td .detail  { color:var(--muted); font-size:.75rem; }
+
+  /* ── Hidden ── */
+  .hidden { display:none !important; }
+
+  /* ── Spinner ── */
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border);
+             border-top-color:var(--cyan); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ── Section title ── */
+  .sec-title { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em;
+               color:var(--muted); margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem; }
+  .sec-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── Countdown ── */
+  #countdown { font-size:2.5rem; font-weight:700; color:var(--cyan); text-align:center; padding:1rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Judge Dashboard</div>
+  <h1>Secure<span>Box</span>: Container Defense</h1>
+  <p>Harden the vulnerable app, then launch the payload barrage. Block the bad traffic. Keep the good traffic flowing.</p>
+</header>
+
+<!-- ── PRE-LAUNCH ─────────────────────────────────────────────────── -->
+<div id="pre-launch">
+  <div class="panel">
+    <div class="sec-title">Scoring Rules</div>
+    <ul class="rules">
+      <li>Every <strong>legitimate payload</strong> that is <strong>blocked</strong> → <span style="color:var(--red)">−1 point</span> <span class="rule-score">(15 total)</span></li>
+      <li>Every <strong>malicious payload</strong> that is <strong>blocked</strong> → <span style="color:var(--green)">+1 point</span> <span class="rule-score">(10 total)</span></li>
+      <li>Every <strong>hygiene check</strong> that is <strong>corrected</strong> → <span style="color:var(--purple)">+1 point</span> <span class="rule-score">(5 total, via docker exec)</span></li>
+      <li>Start: <strong style="color:var(--cyan)">0</strong> &nbsp;·&nbsp; Max: <strong style="color:var(--cyan)">15</strong> &nbsp;·&nbsp; Each press runs a fresh barrage &nbsp;·&nbsp; Only the latest run counts</li>
+    </ul>
+
+    <div class="sec-title" style="margin-top:1.4rem;">Flag Thresholds</div>
+    <ul class="rules">
+      <li>≥ 1 pt &nbsp;→ <span style="color:var(--muted)">unlock Flag 1</span></li>
+      <li>≥ 3 pts → <span style="color:var(--muted)">unlock Flag 2</span></li>
+      <li>≥ 6 pts → <span style="color:var(--muted)">unlock Flag 3</span></li>
+      <li>≥ 10 pts → <span style="color:var(--muted)">unlock Flag 4</span></li>
+    </ul>
+
+    <button id="launch-btn" onclick="launchBarrage()">&#9654; Launch Payload Barrage</button>
+  </div>
+</div>
+
+<!-- ── LOADING ──────────────────────────────────────────────────────── -->
+<div id="loading" class="hidden">
+  <div class="panel">
+    <div class="sec-title"><span class="spinner"></span> Barrage Active — do not refresh</div>
+    <div class="progress-wrap"><div class="progress-bar" id="prog-bar"></div></div>
+    <p id="prog-label" style="color:var(--muted);font-size:.8rem;margin:.4rem 0 .8rem;">Firing hygiene checks…</p>
+    <div id="feed"></div>
+  </div>
+</div>
+
+<!-- ── RESULTS ──────────────────────────────────────────────────────── -->
+<div id="results" class="hidden">
+
+  <!-- Score -->
+  <div class="panel">
+    <div class="sec-title">Score</div>
+    <div class="score-wrap">
+      <div class="score-num" id="score-display">0</div>
+      <div class="score-label">points this run</div>
+      <div class="breakdown">
+        <div class="bk"><span class="bk-num good" id="bk-mal">0</span><span class="bk-lbl">Attacks blocked</span></div>
+        <div class="bk"><span class="bk-num bad"  id="bk-legit">0</span><span class="bk-lbl">Legit broken</span></div>
+        <div class="bk"><span class="bk-num hyg"  id="bk-hyg">0</span><span class="bk-lbl">Hygiene passed</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flags -->
+  <div class="panel">
+    <div class="sec-title">Flags</div>
+    <div class="flags-track">
+      <div class="flag-box" id="flag-1">
+        <div class="threshold">≥ 1 point — Flag 1</div>
+        <div class="flag-val" id="flag-val-1">████████████████████████████</div>
+        <div class="lock" id="lock-1">🔒</div>
+      </div>
+      <div class="flag-box" id="flag-2">
+        <div class="threshold">≥ 3 points — Flag 2</div>
+        <div class="flag-val" id="flag-val-2">████████████████████████████</div>
+        <div class="lock" id="lock-2">🔒</div>
+      </div>
+      <div class="flag-box" id="flag-3">
+        <div class="threshold">≥ 6 points — Flag 3</div>
+        <div class="flag-val" id="flag-val-3">████████████████████████████</div>
+        <div class="lock" id="lock-3">🔒</div>
+      </div>
+      <div class="flag-box" id="flag-4">
+        <div class="threshold">≥ 10 points — Flag 4</div>
+        <div class="flag-val" id="flag-val-4">████████████████████████████</div>
+        <div class="lock" id="lock-4">🔒</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Malicious payloads table -->
+  <div class="panel">
+    <div class="sec-title">Malicious Payloads (10)</div>
+    <table class="results-table">
+      <thead><tr><th>ID</th><th>Name</th><th>Result</th><th>Detail</th></tr></thead>
+      <tbody id="malicious-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Legitimate payloads table -->
+  <div class="panel">
+    <div class="sec-title">Legitimate Payloads (15)</div>
+    <table class="results-table">
+      <thead><tr><th>ID</th><th>Name</th><th>Result</th><th>Detail</th></tr></thead>
+      <tbody id="legit-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Hygiene checks table -->
+  <div class="panel">
+    <div class="sec-title">Hygiene Checks (5)</div>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>Name</th><th>Result</th><th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="hygiene-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel" style="text-align:center;">
+    <button id="rerun-btn" onclick="launchBarrage()" style="
+      padding:.8rem 2rem; background:var(--surface3); color:var(--cyan);
+      border:1px solid var(--cyan); border-radius:6px; font-family:inherit;
+      font-size:.85rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+      cursor:pointer;">&#8635; Run Again</button>
+  </div>
+</div>
+
+<script>
+const FLAG_THRESHOLDS = [
+  { pts: 1,  id: "flag-1", lock: "lock-1" },
+  { pts: 3,  id: "flag-2", lock: "lock-2" },
+  { pts: 6,  id: "flag-3", lock: "lock-3" },
+  { pts: 10, id: "flag-4", lock: "lock-4" },
+];
+
+let progInterval = null;
+
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+function animateProgress(durationMs) {
+  const bar   = document.getElementById('prog-bar');
+  const label = document.getElementById('prog-label');
+  const msgs  = [
+    "Running hygiene checks via docker exec…",
+    "Firing network payloads…",
+    "Shuffling attack and legitimate traffic…",
+    "Awaiting responses…",
+    "Tallying results…",
+  ];
+  let pct = 0;
+  let msgIdx = 0;
+  const step = 100 / (durationMs / 200);
+  progInterval = setInterval(() => {
+    pct = Math.min(pct + step, 95);
+    bar.style.width = pct + '%';
+    if (pct > (msgIdx + 1) * 20 && msgIdx < msgs.length - 1) {
+      msgIdx++;
+      label.textContent = msgs[msgIdx];
+    }
+  }, 200);
+}
+
+function stopProgress() {
+  clearInterval(progInterval);
+  document.getElementById('prog-bar').style.width = '100%';
+}
+
+function addFeedRow(id, name, type, succeeded) {
+  const feed = document.getElementById('feed');
+  const row  = document.createElement('div');
+  row.className = 'feed-row';
+  const icon = succeeded ? '✓' : '✗';
+  const statusClass = succeeded ? 'ok' : 'fail';
+  row.innerHTML = `
+    <span class="feed-id">${id}</span>
+    <span class="feed-name">${name}</span>
+    <span class="feed-status ${statusClass}">${icon}</span>`;
+  feed.appendChild(row);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function animateScore(target) {
+  const el = document.getElementById('score-display');
+  const duration = 1200;
+  const steps = 40;
+  const delay = duration / steps;
+  let current = 0;
+  const step = target / steps;
+  el.style.color = target >= 0 ? 'var(--cyan)' : 'var(--red)';
+  for (let i = 0; i < steps; i++) {
+    current += step;
+    el.textContent = Math.round(current);
+    await sleep(delay);
+  }
+  el.textContent = target;
+}
+
+const REDACT = '████████████████████';
+let _lastLegit = [];   // stored so flag-4 can reveal them later
+
+async function revealResults(payloadResults) {
+  const malicious  = payloadResults.filter(p => p.type === 'malicious');
+  const legitimate = payloadResults.filter(p => p.type === 'legitimate');
+  _lastLegit = legitimate;
+
+  // ── Malicious table: all rows start redacted ─────────────────────────────
+  const malTbody = document.getElementById('malicious-tbody');
+  malTbody.innerHTML = '';
+  malicious.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="id-col">${p.id}</td>
+      <td id="mname-${idx}">${REDACT}</td>
+      <td class="result-icon" id="micon-${idx}">—</td>
+      <td class="detail"    id="mdetail-${idx}">${REDACT}</td>`;
+    malTbody.appendChild(tr);
+  });
+
+  // ── Legitimate table: all rows start redacted ────────────────────────────
+  const legTbody = document.getElementById('legit-tbody');
+  legTbody.innerHTML = '';
+  legitimate.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="id-col">${p.id}</td>
+      <td id="lname-${idx}">${REDACT}</td>
+      <td class="result-icon" id="licon-${idx}">—</td>
+      <td class="detail"    id="ldetail-${idx}">${REDACT}</td>`;
+    legTbody.appendChild(tr);
+  });
+
+  // ── Countdown ─────────────────────────────────────────────────────────────
+  show('results');
+  const cd = document.createElement('div');
+  cd.id = 'countdown';
+  document.getElementById('malicious-tbody').closest('.panel')
+    .insertBefore(cd, document.getElementById('malicious-tbody').closest('table'));
+  for (let n = 3; n >= 1; n--) { cd.textContent = n; await sleep(900); }
+  cd.remove();
+
+  // ── Reveal malicious one-by-one; show name+detail only if blocked ─────────
+  for (let idx = 0; idx < malicious.length; idx++) {
+    const p    = malicious[idx];
+    const icon = document.getElementById(`micon-${idx}`);
+    const blocked = !p.succeeded;
+    icon.textContent = blocked ? '✓ BLOCKED' : '✗ PASS';
+    icon.style.color = blocked ? 'var(--green)' : 'var(--red)';
+    if (blocked) {
+      document.getElementById(`mname-${idx}`).textContent   = p.name;
+      document.getElementById(`mdetail-${idx}`).textContent = p.detail;
+    }
+    await sleep(150);
+  }
+
+  // ── Reveal legitimate pass/fail icons; names+details stay redacted ────────
+  legitimate.forEach((p, idx) => {
+    const icon = document.getElementById(`licon-${idx}`);
+    icon.textContent = p.succeeded ? '✓ OK' : '✗ BROKEN';
+    icon.style.color = p.succeeded ? 'var(--green)' : 'var(--red)';
+  });
+}
+
+function populateHygiene(checks) {
+  const tbody = document.getElementById('hygiene-tbody');
+  tbody.innerHTML = '';
+  checks.forEach(h => {
+    const tr     = document.createElement('tr');
+    const icon   = h.succeeded ? '✓' : '✗';
+    const color  = h.succeeded ? 'var(--green)' : 'var(--red)';
+    const name   = h.succeeded ? h.name   : REDACT;
+    const detail = h.succeeded ? h.detail : REDACT;
+    tr.innerHTML = `
+      <td class="id-col">${h.id}</td>
+      <td>${name}</td>
+      <td style="color:${color};font-weight:700;">${icon}</td>
+      <td class="detail">${detail}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+const FLAG_VALUES = {
+  "flag-1": "FLAG{f1r5t_bl00d_d3f3nd3r}",
+  "flag-2": "FLAG{g3tt1ng_th3_h4ng_0f_1t}",
+  "flag-3": "FLAG{bl03_t34m_v3t3r4n}",
+  "flag-4": "FLAG{f0rtr3ss_m0d3_4ct1v4t3d}",
+};
+
+function revealFlags(flags) {
+  FLAG_THRESHOLDS.forEach(({ pts, id, lock }) => {
+    const keyword = pts === 1 ? 'f1r5t' : pts === 3 ? 'g3tt1ng' : pts === 6 ? 'bl03' : 'f0rtr3';
+    if (flags.some(f => f.includes(keyword))) {
+      document.getElementById(id).classList.add('unlocked');
+      document.getElementById(lock).textContent = '🔓';
+      document.getElementById('flag-val-' + id.split('-')[1]).textContent = FLAG_VALUES[id];
+
+      // Flag 4 = challenge complete: reveal all legitimate payload rows
+      if (pts === 10) {
+        _lastLegit.forEach((p, idx) => {
+          document.getElementById(`lname-${idx}`).textContent   = p.name;
+          document.getElementById(`ldetail-${idx}`).textContent = p.detail;
+        });
+      }
+    }
+  });
+}
+
+async function launchBarrage() {
+  // Reset UI
+  ['flag-1','flag-2','flag-3','flag-4'].forEach(id => {
+    document.getElementById(id).classList.remove('unlocked');
+  });
+  ['lock-1','lock-2','lock-3','lock-4'].forEach(id => {
+    document.getElementById(id).textContent = '🔒';
+  });
+  ['flag-val-1','flag-val-2','flag-val-3','flag-val-4'].forEach(id => {
+    document.getElementById(id).textContent = REDACT;
+  });
+  _lastLegit = [];
+  document.getElementById('feed').innerHTML = '';
+  document.getElementById('prog-bar').style.width = '0';
+
+  // Show loading
+  hide('pre-launch');
+  hide('results');
+  show('loading');
+
+  const btn = document.getElementById('launch-btn');
+  if (btn) btn.disabled = true;
+
+  animateProgress(13000);
+
+  let data;
+  try {
+    const resp = await fetch('/api/launch', { method: 'POST' });
+    data = await resp.json();
+  } catch (err) {
+    stopProgress();
+    document.getElementById('prog-label').textContent = 'Error: ' + err.message;
+    return;
+  }
+
+  stopProgress();
+  hide('loading');
+
+  // Populate hygiene immediately
+  populateHygiene(data.hygiene_results);
+
+  // Reveal payloads with animation
+  await revealResults(data.payload_results);
+
+  // Animate score
+  document.getElementById('bk-mal').textContent   = `${data.breakdown.mal_blocked}/${data.breakdown.malicious_total}`;
+  document.getElementById('bk-legit').textContent = `${data.breakdown.legit_failed}/${data.breakdown.legit_total}`;
+  document.getElementById('bk-hyg').textContent   = `${data.breakdown.hyg_passed}/${data.breakdown.hygiene_total}`;
+  await animateScore(data.score);
+
+  // Reveal flags
+  revealFlags(data.flags);
+
+  show('results');
+  show('pre-launch');
+}
+</script>
+</body>
+</html>

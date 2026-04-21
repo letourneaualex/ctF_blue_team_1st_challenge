@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ user.username }} — SecureBox</title>
+<style>
+  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+  .card { background:#fff; border:1px solid #ddd; border-radius:6px; padding:24px; }
+  .bio  { background:#f9f9f9; border-left:3px solid #ccc; padding:10px 14px; margin:12px 0; }
+  a.btn { display:inline-block; padding:8px 18px; background:#333; color:#fff;
+          text-decoration:none; border-radius:4px; margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>{{ user.username }}</h2>
+  <p><strong>Email:</strong> {{ user.email }}</p>
+  <!-- VULNERABLE: bio rendered with | safe — stored XSS -->
+  <div class="bio">{{ user.bio | safe }}</div>
+
+  {% if current_user_id == user.id %}
+    <a class="btn" href="/profile/edit">Edit Profile</a>
+    <a class="btn" href="/account/password">Change Password</a>
+  {% endif %}
+</div>
+<p><a href="/">Home</a></p>
+</body>
+</html>

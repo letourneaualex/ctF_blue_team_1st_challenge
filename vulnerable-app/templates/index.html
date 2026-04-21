@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SecureBox Social</title>
+<style>
+  body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background:#f5f5f5; }
+  nav a { margin-right: 12px; }
+  .hero { background:#fff; border:1px solid #ddd; border-radius:6px; padding:30px; margin-top:20px; }
+  h1 { color:#333; }
+</style>
+</head>
+<body>
+<nav>
+  {% if username %}
+    Logged in as <strong>{{ username }}</strong> &nbsp;|&nbsp;
+    <a href="/profile/{{ session.get('user_id', 1) }}">My Profile</a>
+    <a href="/upload">Upload</a>
+    <a href="/search">Search</a>
+    <a href="/logout">Logout</a>
+  {% else %}
+    <a href="/login">Login</a>
+    <a href="/register">Register</a>
+    <a href="/search">Search</a>
+  {% endif %}
+</nav>
+
+<div class="hero">
+  <h1>Welcome to SecureBox Social</h1>
+  <p>A community platform for sharing ideas and files.</p>
+  {% if username %}
+    <p>Hello, <strong>{{ username }}</strong>! Good to have you back.</p>
+  {% else %}
+    <p><a href="/login">Log in</a> or <a href="/register">create an account</a> to get started.</p>
+  {% endif %}
+</div>
+</body>
+</html>

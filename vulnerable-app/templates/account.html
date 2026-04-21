@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Change Password — SecureBox</title>
+<style>
+  body { font-family: sans-serif; max-width: 400px; margin: 80px auto; padding: 0 20px; }
+  input { display:block; width:100%; padding:8px; margin:8px 0 16px; box-sizing:border-box; }
+  button { padding:10px 24px; background:#333; color:#fff; border:none; cursor:pointer; border-radius:4px; }
+  .error { color:red; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<h2>Change Password</h2>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="POST">
+  <label>Current Password</label>
+  <input type="password" name="current_password">
+  <label>New Password</label>
+  <input type="password" name="new_password">
+  <button type="submit">Update Password</button>
+</form>
+<p><a href="/">Cancel</a></p>
+</body>
+</html>
